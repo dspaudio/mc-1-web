@@ -14,7 +14,7 @@ const DEV = { w: 963, h: 588 };
  * Same hardware, same faceplate; only the wasm differs. The choice is kept
  * in localStorage and each firmware has its own flash image in IndexedDB. */
 const FW = 'mc1';
-document.getElementById('title').textContent = 'MC-1 0.1.0 · FM-1 emulator';
+document.getElementById('title').textContent = 'MC-1 0.1.1 · FM-1 emulator';
 /* ---- panel mapping (firmware/src/panel.c PANEL_DEFAULT) ----
  * label order: FX SCL ENV LFO EDIT GLO HOME SAVE ARP SEQ PLAY REC OCT- OCT+ */
 const BTN = { 'OCT-': 0, 'OCT+': 1, FX: 2, SCL: 3, ENV: 4, LFO: 5, EDIT: 6, GLO: 7,
@@ -301,13 +301,19 @@ async function saveFlash(buf) {
 /* ------------------------------------------------------------ power on --- */
 async function powerOn() {
     const power = document.getElementById('power');
+    const status = document.getElementById('status');
+    let readyTimer;
     power.style.pointerEvents = 'none';
+    status.textContent = 'Starting audio engine…';
     try {
     ctx = new AudioContext({ sampleRate: 44100, latencyHint: 'interactive' });
     if(ctx.sampleRate !== 44100) throw new Error('44.1 kHz audio context required');
-    await ctx.audioWorklet.addModule('worklet.js?v=0.1.0-bank48');
+    await ctx.audioWorklet.addModule('worklet.js?v=0.1.1');
     const [wasmBytes, flashImage] = await Promise.all([
-        (await fetch(FW + '.wasm' + (FW === 'mc1' ? '?v=0.1.0-bank48' : ''))).arrayBuffer(),
+        fetch(FW + '.wasm?v=0.1.1').then(response => {
+            if (!response.ok) throw new Error('Firmware download failed (HTTP ' + response.status + ')');
+            return response.arrayBuffer();
+        }),
         loadFlash(),
     ]);
     const wasmModule = await WebAssembly.compile(wasmBytes);
@@ -315,21 +321,39 @@ async function powerOn() {
         outputChannelCount: [2],
         processorOptions: { wasmModule, flashImage },
     });
-    node.onprocessorerror = () => {document.getElementById('status').textContent='Audio engine error; reload to retry';};
+    let resolveReady, rejectReady;
+    const ready = new Promise((resolve, reject) => {
+        resolveReady = resolve;
+        rejectReady = reject;
+    });
+    node.onprocessorerror = () => {
+        status.textContent = 'Audio engine error; reload to retry';
+        rejectReady(new Error('Audio processor failed'));
+    };
     node.port.onmessage = ev => {
         const m = ev.data;
-        if(m.t==='error') { document.getElementById('status').textContent=m.message; console.error(m.message); }
-        if(m.t==='ready') document.getElementById('status').textContent='MC-1 0.1.0 · 48 presets · audio ready';
+        if(m.t==='error') { status.textContent = m.message; rejectReady(new Error(m.message)); }
+        if(m.t==='ready') resolveReady();
         if (m.t === 'frame') { drawFB(m.fb); applyLeds(m.leds, m.dims); }
         else if (m.t === 'leds') applyLeds(m.leds, m.dims);
         else if (m.t === 'flash') saveFlash(m.data);
     };
     node.connect(ctx.destination);
-    await ctx.resume();
+    await Promise.race([
+        Promise.all([ready, ctx.resume()]),
+        new Promise((resolve, reject) => {
+            readyTimer = setTimeout(() => reject(new Error('Audio engine startup timed out')), 10000);
+        }),
+    ]);
     sendMaster();
+    status.textContent = 'MC-1 0.1.1 · 48 presets · audio ready';
     power.remove();
-    setTimeout(() => node.port.postMessage({ t: 'start' }), 50);   // first frame
-    } catch(e) { power.style.pointerEvents = ''; power.querySelector('small').textContent = 'Cannot start: '+e.message; if(ctx) await ctx.close(); }
+    node.port.postMessage({ t: 'start' });
+    } catch(e) {
+        status.textContent = power.querySelector('small').textContent = 'Cannot start: ' + e.message;
+        if (node) { node.disconnect(); node.port.onmessage = null; node.onprocessorerror = null; node = null; }
+        if (ctx) { await ctx.close(); ctx = null; }
+    } finally { clearTimeout(readyTimer); power.style.pointerEvents = ''; }
 }
 document.getElementById('power').addEventListener('click', powerOn, false);
 

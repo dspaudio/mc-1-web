@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import fs from 'node:fs';import assert from 'node:assert/strict';
+const version=fs.readFileSync('VERSION','utf8').trim();
+assert.equal(JSON.parse(fs.readFileSync('build/build-info.json')).version,version);
+assert.equal(JSON.parse(fs.readFileSync('package.json')).version,version);
+assert(fs.readFileSync('core/src/mcfm.h','utf8').includes('#define MC_VERSION "'+version+'"'));
 const bytes=fs.readFileSync('build/mc1.wasm');const mod=new WebAssembly.Module(bytes);
 assert.equal(WebAssembly.Module.imports(mod).length,0);
 const boot=(saved)=>{const e=new WebAssembly.Instance(mod,{}).exports;new Uint8Array(e.memory.buffer,e.emu_flash_ptr(),e.emu_flash_size()).fill(255);if(saved)new Uint8Array(e.memory.buffer,e.emu_flash_ptr(),saved.length).set(saved);e.emu_init();return e;};
 const tap=(e,b)=>{e.emu_input(0,1<<b);e.emu_input(0,0);};
 const e=boot();assert.equal(e.emu_state(0),118);e.emu_enc(0,3);assert.equal(e.emu_state(1),3);e.emu_enc(0,-3);
-tap(e,7);tap(e,7);assert.equal(e.emu_state(2),4);e.emu_enc(5,1);assert.equal(e.emu_state(3),1);assert.equal(e.emu_state(5),48);
+e.emu_enc(1,41);assert.equal(e.emu_state(6),47);e.emu_enc(1,1);assert.equal(e.emu_state(6),0);
+tap(e,7);assert.equal(e.emu_state(2),5);tap(e,7);assert.equal(e.emu_state(2),2);tap(e,7);assert.equal(e.emu_state(2),4);e.emu_enc(5,1);assert.equal(e.emu_state(3),1);assert.equal(e.emu_state(5),48);
 tap(e,8);tap(e,2);assert.equal(e.emu_state(2),3);e.emu_enc(2,1);assert.equal(e.emu_state(5),49);
 tap(e,9);tap(e,9);assert(e.emu_flash_gen()>0);
 const flash=new Uint8Array(e.memory.buffer,e.emu_flash_ptr(),e.emu_flash_size()).slice();const restored=boot(flash);assert.equal(restored.emu_state(3),1);assert.equal(restored.emu_state(5),49);

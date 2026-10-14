@@ -20,6 +20,7 @@ static float audio[1024];
 static uint8_t flash[8192],leds[11],dims[11],held_part[27],held_note[27];
 static uint32_t flash_gen,fb_gen,notes,buttons;
 static int master=1023;
+static const uint8_t step_keys[MC_STEPS]={0,2,4,6,7,9,11,12,14,16,18,19,21,23,24,26};
 static const int8_t matrix[6][11]={
  {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
  {5,11,4,10,3,9,2,8,-1,-1,-1},
@@ -41,7 +42,7 @@ API("emu_frame") void emu_frame(void){
  service();
  for(unsigned y=0;y<240;y+=8)mc_ui_strip(&engine,&ui,y,8,fb+y*240);
  for(unsigned c=0;c<11;c++){leds[c]=dims[c]=0;for(unsigned r=1;r<5;r++){
- int key=matrix[r][c];int on=(key==12&&engine.playing)||(key==13&&engine.recording)||(key>=14&&key<30&&engine.playing&&engine.step==key-14);
+ int key=matrix[r][c];int on=(key==0&&ui.octave<0)||(key==1&&ui.octave>0)||(key==12&&engine.playing)||(key==13&&engine.recording)||(engine.playing&&key==14+step_keys[engine.step]);
  if(on)leds[c]|=(uint8_t)(1u<<r);
  }}fb_gen++;
 }

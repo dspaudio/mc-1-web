@@ -6,5 +6,5 @@ r=Path(__file__).resolve().parents[1];os.chdir(r);out=r/'build';out.mkdir(exist_
 core=sorted(str(p) for p in (r/'core/src').glob('*.c'))
 subprocess.run([os.environ.get('CLANG','clang'),'--target=wasm32','-O2','-fno-builtin','-ffreestanding','-nostdlib','-Wall','-Wextra','-Werror','-Icore/src','-Wl,--no-entry','-Wl,--export-memory','-Wl,-z,stack-size=1048576','-Wl,--global-base=1048576',*core,'src/mc1_wasm.c','-o',str(out/'mc1.wasm')],check=True)
 for n in ['index.html','emu.js','worklet.js']:shutil.copy(r/'site'/n,out/n)
-info={'product':'MC-1','version':'0.1.0','core':json.loads((r/'CORE.json').read_text()),'wasm_sha256':hashlib.sha256((out/'mc1.wasm').read_bytes()).hexdigest(),'wasm_bytes':(out/'mc1.wasm').stat().st_size}
+info={'product':'MC-1','version':(r/'VERSION').read_text().strip(),'core':json.loads((r/'CORE.json').read_text()),'wasm_sha256':hashlib.sha256((out/'mc1.wasm').read_bytes()).hexdigest(),'wasm_bytes':(out/'mc1.wasm').stat().st_size}
 (out/'build-info.json').write_text(json.dumps(info,indent=2)+'\n')

@@ -1,18 +1,18 @@
 {
   "repository": "https://github.com/dspaudio/mc-1",
-  "commit": "f41e6728cdbca74e10009dc11ced1ec388c4826a",
+  "commit": "fd2d16870e0ef97a37e6d3e78aba41e27d58b61f",
   "files": {
     "core/host/bridge.c": "66202b4359beddf392ccc0b3269ebcccebcc83a2646e9fa282e112c3ff2ed88c",
     "core/src/demo.c": "4ab9296f682e5b96ae56f9b6a76f5068d613a7401722017a94f0a17099e5c502",
     "core/src/effects.c": "5e603a8ed258dda6b519908540344a7a7839db8019dc09c67305fc34d40b4a48",
     "core/src/engine.c": "5839040e9f745c68007235c8ce35ea19f715bb3fd9b680f026b6d917ecce1f8f",
     "core/src/factory.c": "e35231bf5d2320e8a7897a2c6734f522451b48a32f58c84f4028ba17ef6a22ef",
-    "core/src/mcfm.h": "e6dd3f2c7a8fa9776988b274da349da661453197585e2b4487924f080f757787",
+    "core/src/mcfm.h": "d70b8f7a13d8b7e90ec3d87eccdbc298d3f70b42cfb3c2551b7fa0ad98252560",
     "core/src/project.c": "609022d51ec808ddc4c6f3310d359d93432eec68768b25771d7a42247ba37a9b",
     "core/src/store.c": "47f07f755c7dcc71e5b21d607cda857df2edc4d396605a3eb88992cf8aa9c990",
     "core/src/store.h": "b8a9f9b75a2e16cb9b84d01282d807e20cd5ede0a05d33aba6f075b1206ac657",
     "core/src/tables.h": "dd3566a6abac65575ac77b2426d6c2e63180ddbc01abe2ba8202ff99762d6e56",
-    "core/src/ui.c": "23d8ba44986713d4dcaca56011111a57d9eec8355974bf14cf7774d64cb1e79b",
+    "core/src/ui.c": "9721b5fec18f263bd2b744e25686256acfd91447766d71095f7400f0fb9bd6ac",
     "core/src/ui.h": "f0fffc6c52260ac43377368aaf05cf9e632f9208302419038abf5dadd6d163e5"
   }
 }

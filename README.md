@@ -1,12 +1,30 @@
-# MC-1 web emulator 0.1.0
+# MC-1 web emulator 0.1.1
 
 An FM-1 faceplate emulator running the original MC-1 C DSP, sequencer, UI and A/B project storage in an AudioWorklet. Adapted from [dspaudio/orbit-web-emu](https://github.com/dspaudio/orbit-web-emu).
 
 Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector. Browser flash uses its own `mc1-emu-v1` IndexedDB database.
 
-Press POWER ON, then PLAY. For NEON SPIRAL: stop, GLO twice, KNOB4 clockwise, PLAY. HOME then FX opens four master effects. SELECT chooses a part; ALGORITHM chooses a melodic preset. PRESETS queues patterns. SAVE twice while stopped stores the project locally; reload restores it.
+Press POWER ON, then PLAY. For NEON SPIRAL: stop, GLO three times, KNOB4 clockwise, PLAY. HOME then FX opens four master effects. SELECT chooses a part; ALGORITHM chooses a melodic preset. PRESETS queues patterns. SAVE twice while stopped stores the project locally; reload restores it.
+
+GLO cycles through GLOBAL MIXER, GROOVE CONTROL and DEMO LIBRARY. In the mixer,
+the four knobs adjust PART 1, PART 2, PART 3 and DRUM levels independently.
+SELECT chooses a part and ARP mutes it; the mixer displays level and mute state.
+The mixer reminder reads `SELECT-ARP to mute`.
+HOME shows pitch marks inside melodic steps so phrase changes remain visible
+even when their rhythms match. Above the knobs, PATTERN shows the current pattern
+and NEXT shows a queued change until the bar boundary. Status messages take priority.
+
+OCT− / OCT+ transpose the melodic keyboard by one octave, up to three octaves
+in either direction. The corresponding button lights below or above the default
+octave. During playback, the sixteen white keys show the sixteen sequencer steps.
 
 Build with clang/LLD (wasm32), Python 3 and Node: `python3 tools/check_core.py && python3 tools/build.py`. Serve `build/` over HTTPS or localhost. The workflow performs native/WASM audio parity and AudioWorklet input/storage checks, then deploys GitHub Pages. Build provenance lives in CORE.json and generated build-info.json.
+
+POWER ON stays available if audio startup fails, displays the failure, and allows
+a retry. Startup must receive the AudioWorklet ready response within ten seconds.
+CI also checks startup failure/retry handling in Node, octave transposition, and
+the sixteen white-key step LEDs. These checks do not establish browser rendering
+or physical-device behavior.
 
 Browser behavior is not FM-1 hardware verification. CPU timing, physical I/O, bootloader, calibration, USB/MIDI and real flash are not emulated. Hardware installation remains unverified. Browser saved data may be cleared by browser settings.
 
