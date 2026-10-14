@@ -54,7 +54,8 @@ API("emu_input") void emu_input(uint32_t nn,uint32_t bb){
  for(unsigned i=0;i<27;i++)if((nn^notes)&(1u<<i)){
  if(nn&(1u<<i)){held_part[i]=engine.selected;int n=53+(int)i+ui.octave*12;held_note[i]=(uint8_t)(n<12?12:n>108?108:n);mc_ui_key(&engine,&ui,i,1);}
  else if(held_part[i]<3)mc_off(&engine,held_part[i],held_note[i]);
- }notes=nn;buttons=bb;service();
+ }
+ notes=nn;buttons=bb;service();
 }
 API("emu_enc") void emu_enc(unsigned e,int step){static const uint8_t map[7]={0,1,3,4,5,6,2};if(e<7)mc_ui_encoder(&engine,&ui,map[e],step);service();}
 API("emu_adc_set") void emu_adc_set(unsigned ch,int v){if(ch==4)master=v<0?0:v>1023?1023:v;}
@@ -68,3 +69,9 @@ API("emu_flash_size") unsigned emu_flash_size(void){return sizeof flash;}
 API("emu_flash_gen") uint32_t emu_flash_gen(void){return flash_gen;}
 /* Read-only test diagnostics, also useful for browser bug reports. */
 API("emu_state") uint32_t emu_state(unsigned k){switch(k){case 0:return engine.project.bpm;case 1:return engine.selected;case 2:return ui.page;case 3:return engine.project.demo;case 4:return engine.playing;case 5:return engine.project.fx[0];case 6:return ui.preset[engine.selected<3?engine.selected:0];case 7:return engine.project.patch[0].cutoff;default:return 0;}}
+
+#ifdef __wasm__
+#include <stddef.h>
+void *memcpy(void *dst,const void *src,size_t n){unsigned char *d=dst;const unsigned char *s=src;while(n--)*d++=*s++;return dst;}
+void *memset(void *dst,int v,size_t n){unsigned char *d=dst;while(n--)*d++=(unsigned char)v;return dst;}
+#endif
