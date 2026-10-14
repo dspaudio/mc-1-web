@@ -5,7 +5,8 @@
 class SloopProcessor extends AudioWorkletProcessor {
     constructor(options) {
         super();
-        const mod = new WebAssembly.Module(options.processorOptions.wasmBytes);
+        try {
+        const mod = options.processorOptions.wasmModule || new WebAssembly.Module(options.processorOptions.wasmBytes);
         this.e = new WebAssembly.Instance(mod, {}).exports;
         const img = options.processorOptions.flashImage;
         if (img && img.byteLength) {        // restore the saved flash before boot
@@ -38,7 +39,9 @@ class SloopProcessor extends AudioWorkletProcessor {
             
             else if (m.t === 'stop') this.running = false;
         };
-        this.postFrame();           // the splash, before audio starts
+        this.postFrame();
+        this.port.postMessage({t:'ready'});
+        } catch(error) { this.failed=true; this.port.postMessage({t:'error',message:String(error)}); }
     }
 
     postFrame() {
@@ -55,6 +58,7 @@ class SloopProcessor extends AudioWorkletProcessor {
     }
 
     process(inputs, outputs) {
+        if(this.failed) return false;
         const out = outputs[0];
         const n = out[0].length;             // 128
         this.e.emu_render(n);

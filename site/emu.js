@@ -305,17 +305,21 @@ async function powerOn() {
     try {
     ctx = new AudioContext({ sampleRate: 44100, latencyHint: 'interactive' });
     if(ctx.sampleRate !== 44100) throw new Error('44.1 kHz audio context required');
-    await ctx.audioWorklet.addModule('worklet.js?v=0.1.0');
+    await ctx.audioWorklet.addModule('worklet.js?v=0.1.0-bank48');
     const [wasmBytes, flashImage] = await Promise.all([
-        (await fetch(FW + '.wasm' + (FW === 'mc1' ? '?v=0.1.0' : ''))).arrayBuffer(),
+        (await fetch(FW + '.wasm' + (FW === 'mc1' ? '?v=0.1.0-bank48' : ''))).arrayBuffer(),
         loadFlash(),
     ]);
+    const wasmModule = await WebAssembly.compile(wasmBytes);
     node = new AudioWorkletNode(ctx, 'sloop', {
         outputChannelCount: [2],
-        processorOptions: { wasmBytes, flashImage },
+        processorOptions: { wasmModule, flashImage },
     });
+    node.onprocessorerror = () => {document.getElementById('status').textContent='Audio engine error; reload to retry';};
     node.port.onmessage = ev => {
         const m = ev.data;
+        if(m.t==='error') { document.getElementById('status').textContent=m.message; console.error(m.message); }
+        if(m.t==='ready') document.getElementById('status').textContent='MC-1 0.1.0 · 48 presets · audio ready';
         if (m.t === 'frame') { drawFB(m.fb); applyLeds(m.leds, m.dims); }
         else if (m.t === 'leds') applyLeds(m.leds, m.dims);
         else if (m.t === 'flash') saveFlash(m.data);
