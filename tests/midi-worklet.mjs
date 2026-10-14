@@ -71,6 +71,35 @@ for(const cleanup of ['steal','program','all-off','all-sound-off','note-off','re
  assert(cleanupMessages.some(v=>(v&0xffff)===0x3580||(v&0xffff)===0x7bb0),cleanup+' releases the previously emitted local note');
  assert(!cleanupMessages.some(v=>(v&0xf0)===0x90),'external note is not echoed during cleanup');
 }
+for(const demo of [0,1])for(const channel of [0,4,15])for(const stalled of [false,true]){
+ const reload=boot(),active=new Set(['12:67']);let cursor=outputPackets.length;
+ const receive=()=>{
+  for(const packet of outputPackets.slice(cursor)){
+   const status=packet&255,note=packet>>>8&127,velocity=packet>>>16&127,key=`${status&15}:${note}`;
+   if((status&0xf0)===0x90&&velocity)active.add(key);
+   else if((status&0xf0)===0x80||(status&0xf0)===0x90)active.delete(key);
+   else if((status&0xf0)===0xb0&&(note===120||note===123))for(const held of active)if(held.startsWith(`${status&15}:`))active.delete(held);
+  }
+  cursor=outputPackets.length;
+ };
+ for(let i=0;i<5;i++)tap(reload,7);turn(reload,2,channel);tap(reload,8);blocks(reload);receive();
+ assert.equal(reload.e.emu_state(36),channel,'데모 로드 전의 MIDI 채널이 적용된다');
+ send(reload,{t:'input',notes:1,buttons:0});blocks(reload,1,!stalled);receive();
+ assert(active.has(`${channel}:53`),'누른 키의 NoteOn이 실제 worklet 출력으로 전달된다');
+ for(let i=0;i<3;i++){
+  send(reload,{t:'input',notes:1,buttons:1<<7});send(reload,{t:'input',notes:1,buttons:0});
+ }
+ if(!demo)turn(reload,2,-1);
+ turn(reload,5,1);assert.equal(reload.e.emu_state(3),demo,'키를 누른 상태에서 선택한 데모를 로드한다');
+ send(reload,{t:'input',notes:0,buttons:0});
+ send(reload,{t:'input',notes:1<<7,buttons:0});
+ if(stalled){blocks(reload,1,false);assert.equal(outputPackets.length,cursor,'미확인 출력은 데모 로드 후에도 추가 배치를 막는다');send(reload,{t:'midi-output-ack'});}
+ blocks(reload);receive();
+ assert.deepEqual([...active],['12:67','0:60'],'데모 로드는 이전 채널을 정리하고 무관한 채널 및 같은 출력 배치의 새 노트를 보존한다');
+ send(reload,{t:'input',notes:0,buttons:0});blocks(reload);receive();
+ assert.deepEqual([...active],['12:67'],'새 키의 NoteOff는 무관한 채널을 보존하면서 외부 노트를 종료한다');
+}
+console.log(JSON.stringify({scenario:'실제 AudioWorklet 데모 2종 재로드, 이전 MIDI 채널 3종 정리와 새 노트 보존, 출력 ACK 지연',cases:12,pass:true}));
 const drumTail=boot(),drumControl=boot();
 for(const processor of [drumTail,drumControl]){
  tap(processor,2);tap(processor,2);for(let knob=2;knob<=5;knob++)turn(processor,knob,-127);
