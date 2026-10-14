@@ -69,7 +69,7 @@ API("emu_flash_ptr") uintptr_t emu_flash_ptr(void){return (uintptr_t)flash;}
 API("emu_flash_size") unsigned emu_flash_size(void){return sizeof flash;}
 API("emu_flash_gen") uint32_t emu_flash_gen(void){return flash_gen;}
 /* Read-only test diagnostics, also useful for browser bug reports. */
-API("emu_state") uint32_t emu_state(unsigned k){switch(k){case 0:return engine.project.bpm;case 1:return engine.selected;case 2:return ui.page;case 3:return engine.project.demo;case 4:return engine.playing;case 5:return engine.project.fx[0];case 6:return ui.preset[engine.selected<3?engine.selected:0];case 7:return engine.project.patch[0].cutoff;default:return 0;}}
+API("emu_state") uint32_t emu_state(unsigned k){switch(k){case 0:return engine.project.bpm;case 1:return engine.selected;case 2:return ui.page;case 3:return engine.project.demo;case 4:return engine.playing;case 5:return engine.project.fx[0];case 6:return ui.preset[engine.selected<3?engine.selected:0];case 7:return engine.project.patch[0].cutoff;case 8:return engine.project.drum_kit;case 9:return engine.pattern;case 10:case 11:case 12:case 13:return engine.project.track_fx[engine.selected][k-10];default:return 0;}}
 
 #ifdef __wasm__
 #include <stddef.h>

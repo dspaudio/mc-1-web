@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import { inflateSync } from 'node:zlib';
 
 const source = fs.readFileSync('site/emu.js', 'utf8');
 const panel = vm.runInNewContext(
@@ -9,9 +10,10 @@ const panel = vm.runInNewContext(
     { document: { getElementById: () => ({}) } },
 );
 const mod = new WebAssembly.Module(fs.readFileSync('build/mc1.wasm'));
-function boot() {
+function boot(saved) {
     const e = new WebAssembly.Instance(mod, {}).exports;
     new Uint8Array(e.memory.buffer, e.emu_flash_ptr(), e.emu_flash_size()).fill(255);
+    if (saved) new Uint8Array(e.memory.buffer, e.emu_flash_ptr(), saved.length).set(saved);
     e.emu_init();
     return e;
 }
@@ -22,6 +24,31 @@ function tap(e, name) {
 function key(e, id) {
     e.emu_input(1 << id, 0);
     e.emu_input(0, 0);
+}
+function saveFlash(e) {
+    const generation = e.emu_flash_gen();
+    tap(e, 'SAVE'); tap(e, 'SAVE');
+    assert(e.emu_flash_gen() > generation, 'SAVE commits a new project record');
+    return new Uint8Array(e.memory.buffer, e.emu_flash_ptr(), e.emu_flash_size()).slice();
+}
+function drumAudio(e) {
+    let hash = 2166136261, energy = 0;
+    for (let lane = 0; lane < 16; lane++) {
+        key(e, lane);
+        for (let block = 0; block < 32; block++) {
+            e.emu_render(128);
+            const samples = new Float32Array(e.memory.buffer, e.emu_audio_ptr(), 256);
+            for (const sample of samples) {
+                assert(Number.isFinite(sample) && Math.abs(sample) < 1, 'drum output is finite and bounded');
+                energy += sample * sample;
+                const pcm = Math.round(sample * 32768) & 65535;
+                hash = Math.imul(hash ^ (pcm & 255), 16777619) >>> 0;
+                hash = Math.imul(hash ^ (pcm >> 8), 16777619) >>> 0;
+            }
+        }
+    }
+    assert(energy > 0.1, 'each kit produces non-silent audio');
+    return { hash, energy };
 }
 function litKeys(e) {
     e.emu_frame();
@@ -52,8 +79,8 @@ for (let part = 0; part < 3; part++) {
     tap(e, 'SAVE'); tap(e, 'SAVE');
     assert(e.emu_flash_gen() > 0, 'panel notes must be saved successfully');
     const saved = new Uint8Array(e.memory.buffer, e.emu_flash_ptr(), e.emu_flash_size());
-    assert.equal(saved[4], 2, 'the saved project uses format version 2');
-    // Format v2: 20-byte header, 72-byte settings, then 8 bytes per step.
+    assert.equal(saved[4], 3, 'the saved project uses format version 3');
+    // Format v3 keeps the 20-byte header, 72-byte settings and 8-byte steps.
     const notes = Array.from({ length: 7 }, (_, step) => saved[20 + 72 + part * 16 * 8 + step * 8]);
     assert.deepEqual(notes, [60, 72, 60, 48, 24, 96, 108], `OCT buttons transpose part ${part + 1} and clamp at +/-3`);
     octaveNotes.push(notes);
@@ -125,3 +152,85 @@ tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 2);
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 4);
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 5);
 console.log(JSON.stringify({ scenario: 'global mixer knobs, saved levels and GLO page cycle', pass: true }));
+
+const kits = boot();
+kits.emu_enc(0, 3);
+assert.equal(kits.emu_state(8), 0, 'factory project starts with kit 1');
+kits.emu_enc(6, -1);
+assert.equal(kits.emu_state(8), 7, 'PRESETS wraps backward from kit 1 to kit 8');
+assert.equal(kits.emu_state(9), 0, 'changing kits does not change the pattern');
+kits.emu_enc(6, 1);
+assert.equal(kits.emu_state(8), 0, 'PRESETS wraps forward from kit 8 to kit 1');
+kits.emu_enc(1, 1);
+assert.equal(kits.emu_state(9), 1, 'ALGORITHM selects patterns with DRUMS selected');
+assert.equal(kits.emu_state(8), 0, 'ALGORITHM does not change the selected kit');
+kits.emu_enc(1, -1);
+assert.equal(kits.emu_state(9), 0, 'ALGORITHM returns to the original pattern');
+
+const kitAudio = [];
+for (let kit = 0; kit < 8; kit++) {
+    const drums = boot();
+    drums.emu_enc(0, 3);
+    drums.emu_enc(6, kit);
+    assert.equal(drums.emu_state(8), kit, `PRESETS selects kit ${kit + 1}`);
+    const saved = saveFlash(drums);
+    assert.equal(saved[23], kit, 'format v3 stores the kit in the former reserved byte');
+    const restored = boot(saved);
+    restored.emu_enc(0, 3);
+    assert.equal(restored.emu_state(8), kit, `kit ${kit + 1} survives save and reboot`);
+    const audio = drumAudio(drums);
+    assert.deepEqual(drumAudio(restored), audio, `kit ${kit + 1} sounds identical after reboot`);
+    kitAudio.push({ kit: kit + 1, ...audio });
+}
+assert.equal(new Set(kitAudio.map(audio => audio.hash)).size, 8, 'all eight kits have different PCM output');
+console.log(JSON.stringify({ scenario: 'eight drum kits: PRESETS wrap, ALGORITHM pattern, distinct audio, save and reboot', kitAudio, pass: true }));
+
+const fx = boot();
+tap(fx, 'FX');
+const trackFx = Array.from({ length: 4 }, (_, part) => Array.from({ length: 4 }, (_, knob) => (part + 1) * 10 + knob));
+for (let part = 0; part < 4; part++) {
+    for (let knob = 0; knob < 4; knob++) fx.emu_enc(knob + 2, trackFx[part][knob]);
+    fx.emu_enc(0, 1);
+}
+for (let part = 0; part < 4; part++) {
+    assert.deepEqual(Array.from({ length: 4 }, (_, knob) => fx.emu_state(knob + 10)), trackFx[part], `FX changes only selected part ${part + 1}`);
+    fx.emu_enc(0, 1);
+}
+assert.equal(fx.emu_state(5), 0, 'editing track effects preserves master effects');
+tap(fx, 'FX'); fx.emu_enc(2, 19);
+assert.equal(fx.emu_state(5), 19, 'FX again switches to master scope');
+assert.equal(fx.emu_state(10), 10, 'master editing preserves track effects');
+tap(fx, 'HOME'); tap(fx, 'FX'); fx.emu_enc(2, 1);
+trackFx[0][0]++;
+assert.equal(fx.emu_state(10), 11, 'HOME then FX returns to selected-track scope');
+assert.equal(fx.emu_state(5), 19);
+const fxFlash = saveFlash(fx);
+assert.equal(fxFlash[4], 3);
+assert.equal(fxFlash[6] + fxFlash[7] * 256, 2136, 'v3 appends 16 track-FX bytes');
+assert.deepEqual(Array.from(fxFlash.slice(2140, 2156)), trackFx.flat(), 'all 16 track-FX parameters are serialized');
+const restoredFx = boot(fxFlash);
+assert.equal(restoredFx.emu_state(5), 19, 'master FX survives reboot');
+for (let part = 0; part < 4; part++) {
+    assert.deepEqual(Array.from({ length: 4 }, (_, knob) => restoredFx.emu_state(knob + 10)), trackFx[part], `part ${part + 1} FX survives reboot`);
+    restoredFx.emu_enc(0, 1);
+}
+console.log(JSON.stringify({ scenario: 'selected-track FX independence, master toggle, HOME reset and v3 save/reboot', trackFx, pass: true }));
+
+// Captured from the original v2 WASM writer: factory project, BPM 137 and delay 37.
+const legacyV2 = inflateSync(Buffer.from('eJzNkUFKw1AQhv8ExVKELlyIOzcuaimEQnlWguYRLaFJSFoalGzcvI07waUn8EaewQt4BW+hqZ1q/CMEfJvOZpiZ75/Nl4bT1EXUcQA8vRwMXt/fPp7RxWr2SkcNu8oA7pHqlfmdQQHXuTcdx/RKGBMbE5zeBobqBOsaAo/a+eqFxq8OzXcXmDQ5q/zEDxKD/5dt/hrIVW1OAFOf50Cp/uAT2UfEJ8TP6f9S+Oxn/zDC7qoXo/Vc9Z36XN33Wu5t+UO673/PffHTFx+1Ds33yt+4yVnlx2e+lT/bvCY/7DMlnxs+kv0V8RHxKf3PhY+3xL8nfjzxUevQfK/8+U3OKu9fhlb+bPMR+cnI55J8bvhM9jHxGfFL+n8j/GJL/A/Ez0B81Do03yt/qslZ5dX5hZU/23xIfmYtPjf8TPZT4mfEZ/R/IXy6Ff6P8QkT/pff', 'base64'));
+assert.equal(legacyV2[4], 2);
+const legacy = boot(legacyV2);
+assert.equal(legacy.emu_state(0), 137, 'old v2 tempo is restored');
+assert.equal(legacy.emu_state(5), 37, 'old v2 effects are restored');
+assert.equal(legacy.emu_state(8), 0, 'old v2 projects load with the original drum kit');
+for (let part = 0; part < 4; part++) {
+    assert.deepEqual(Array.from({ length: 4 }, (_, knob) => legacy.emu_state(knob + 10)), [0, 0, 0, 0], `old v2 part ${part + 1} FX defaults to dry`);
+    legacy.emu_enc(0, 1);
+}
+legacy.emu_enc(0, 3);
+legacy.emu_enc(6, 7);
+const upgraded = boot(saveFlash(legacy));
+assert.equal(upgraded.emu_state(0), 137, 'saving an old project preserves its tempo');
+assert.equal(upgraded.emu_state(5), 37, 'saving an old project preserves its effects');
+assert.equal(upgraded.emu_state(8), 7, 'saving an old project adds the selected kit');
+console.log(JSON.stringify({ scenario: 'real v2 project import, default kit, dry track FX and resave with kit 8', pass: true }));

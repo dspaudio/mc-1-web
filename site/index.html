@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>MC-1 0.1.1 — FM-1 emulator</title>
+<title>MC-1 0.1.2 — FM-1 emulator</title>
 <meta name="theme-color" content="#101114">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -283,18 +283,18 @@ body.compact #manual { display: none; }
 </style>
 </head>
 <body>
-<h1 id="title">MC-1 0.1.1 · FM-1 emulator</h1>
+<h1 id="title">MC-1 0.1.2 · FM-1 emulator</h1>
 <button id="fs" aria-label="Toggle fullscreen">⛶</button>
 <div id="fstip"><div class="card"><h2>FULLSCREEN</h2><p>Use Share → Add to Home Screen on iPhone.</p><span class="ok">GOT IT</span></div></div>
-<div id="device"><div id="power"><div class="ring">⏻</div><span>POWER ON</span><small>MC-1 0.1.1 · actual C engine and screen · sound on</small></div></div>
+<div id="device"><div id="power"><div class="ring">⏻</div><span>POWER ON</span><small>MC-1 0.1.2 · actual C engine and screen · sound on</small></div></div>
 <div id="help"><b>MC-1 ONLY</b> · Drag or scroll knobs · Space: PLAY · R: REC · 1–0: panel buttons · Z/X: octave · Arrow keys: part/preset<br>
 
 <a href="https://github.com/dspaudio/mc-1-web">Emulator source</a> · <a href="https://github.com/dspaudio/mc-1">Firmware and complete preset list</a></div>
-<span id="status">MC-1 0.1.1 · POWER ON to start</span>
+<span id="status">MC-1 0.1.2 · POWER ON to start</span>
 <section id="manual"><h2>PLAY MC-1</h2><div class="cards">
-<div class="card"><h3>NEON SPIRAL / EFFECTS</h3><p>While stopped: press GLO three times, turn KNOB4 clockwise to load NEON SPIRAL, then PLAY. Loading replaces the working project. HOME then FX opens DELAY / REVERB / DRIVE / CHORUS.</p></div>
-<div class="card"><h3>PARTS AND SOUNDS</h3><p>SELECT chooses three melodic parts or drums. ALGORITHM browses melodic presets; PRESETS queues one of four patterns. ARP mutes the selected part. GLO opens the four-part mixer, then groove controls, then the demo library. HOME gives cutoff, resonance, decay and PCM/glide; pitch marks show the current phrase.</p></div>
+<div class="card"><h3>NEON SPIRAL / EFFECTS</h3><p>While stopped: press GLO three times, turn KNOB4 clockwise to load NEON SPIRAL, then PLAY. Loading replaces the working project. HOME then FX opens the selected track's DELAY / REVERB / DRIVE / CHORUS. Press FX again for master effects; SELECT changes the track.</p></div>
+<div class="card"><h3>PARTS AND SOUNDS</h3><p>SELECT chooses three melodic parts or drums. PRESETS browses 64 melodic presets or eight drum kits; ALGORITHM queues one of four patterns. ARP mutes the selected part. GLO opens the four-part mixer, then groove controls, then the demo library. HOME gives cutoff, resonance, decay and PCM/glide; pitch marks show the current phrase.</p></div>
 <div class="card"><h3>STEP EDIT / DRUMS</h3><p>EDIT toggles note entry; keys enter a note at the selected step. Drum knobs select SOUND / STEP / HIT / LEVEL. ENV adjusts melodic ADSR. REC records live notes quantized to the current step.</p></div>
 <div class="card"><h3>SAVE AND LIMITS</h3><p>SAVE twice while stopped writes the actual C A/B project format to emulated flash, persisted in IndexedDB. Reload restores it. Browser storage can be cleared by your browser. This is a behavioral FM-1 emulator, not a pi32v2 CPU or timing simulator. No USB, MIDI, calibration, firmware flashing or hardware guarantees.</p></div></div>
 <p class="src">FM-1 faceplate, input and AudioWorklet infrastructure adapted from <a href="https://github.com/dspaudio/orbit-web-emu">ORBIT web emulator</a>, originally <a href="https://github.com/sabliran/sloop-web-emu">SLOOP web emulator</a>. GPL-3.0-only. Only MC-1 firmware is included. Original sound design; not affiliated with Roland or M-VAVE.</p></section>
-<script src="emu.js?v=0.1.1"></script></body></html>
+<script src="emu.js?v=0.1.2"></script></body></html>
