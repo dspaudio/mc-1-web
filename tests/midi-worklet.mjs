@@ -71,4 +71,17 @@ for(const cleanup of ['steal','program','all-off','all-sound-off','note-off','re
  assert(cleanupMessages.some(v=>(v&0xffff)===0x3580||(v&0xffff)===0x7bb0),cleanup+' releases the previously emitted local note');
  assert(!cleanupMessages.some(v=>(v&0xf0)===0x90),'external note is not echoed during cleanup');
 }
-console.log(JSON.stringify({scenario:'real AudioWorklet MIDI input/output, native PCM/packet/save parity, external note+drum REC, song repeat/advance/stop/loop, MIDI clock/continue/reset queue bounds and previously emitted note cleanup',...audioResult,recordHash:byteHash(record),pass:true}));
+const drumTail=boot(),drumControl=boot();
+for(const processor of [drumTail,drumControl]){
+ tap(processor,2);tap(processor,2);for(let knob=2;knob<=5;knob++)turn(processor,knob,-127);
+ tap(processor,8);turn(processor,1,63);tap(processor,12);input(processor,[0x99,36,120]);blocks(processor);
+}
+tap(drumTail,12);assert.equal(drumTail.e.emu_state(4),0);
+let tailEnergy=0;
+for(let block=0;block<32;block++){
+ const stopped=[new Float32Array(128),new Float32Array(128)],running=[new Float32Array(128),new Float32Array(128)];
+ drumTail.process([],[stopped]);drumControl.process([],[running]);
+ for(let channel=0;channel<2;channel++){assert.deepEqual(stopped[channel],running[channel],'STOP preserves the exact dry drum tail');for(const sample of stopped[channel])tailEnergy+=sample*sample;}
+}
+assert(tailEnergy>0.01,'tail comparison uses an audible dry drum, not FX residue');
+console.log(JSON.stringify({scenario:'real AudioWorklet MIDI input/output, native PCM/packet/save parity, external note+drum REC, song repeat/advance/stop/loop, MIDI clock/continue/reset queue bounds and previously emitted note cleanup and unchanged STOP drum tails',...audioResult,recordHash:byteHash(record),pass:true}));

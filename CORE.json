@@ -1,13 +1,13 @@
 {
   "repository": "https://github.com/dspaudio/mc-1",
-  "commit": "3f3fc02303f62600f8567f2a5a459941e542c4d0",
+  "commit": "fb869a6ea1229d6e20307b774300022f3e16bde5",
   "files": {
     "core/LICENSES/CC0-VSCO.txt": "36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673",
     "core/assets/recorded/manifest.json": "47acfab4d4b9e4c8daec2734101e4f91a5b348960d62d3e418bccabc1ed53b11",
     "core/host/bridge.c": "a02069688103a29d81ee3c38aadb4597c67447c525d96499e341a95def87a687",
     "core/src/demo.c": "6da79e086eaefa58cac8421bec2385229523e961577f5b1f7f5ca15ea3564fca",
     "core/src/effects.c": "f8c71e95307938741643c1070df0c413aa500172bbccb7584c680a8258a5d08b",
-    "core/src/engine.c": "933c3e4905a320fdcec6b55187e038a33920bd430e090312b8f2732ddb5c388b",
+    "core/src/engine.c": "cc57b748daa16be090c1922aeb7d8e0ad5553734573cf2d15e4d8e7b8bd7fdd4",
     "core/src/factory.c": "90dddccb6aac2cc80922192c92c402fa34135d6cfb6b41b992a3b450cffced2a",
     "core/src/mcfm.h": "8c90eca5fafa96f2bc138acc218722ee94cb6bcca0b0be7896cba03b69cdae17",
     "core/src/midi.c": "1b0f6497dca54f6164ed5856f368923c643004c82a30cc36fe3261bc2e010413",
