@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>MC-1 0.1.3 — FM-1 emulator</title>
+<title>MC-1 0.1.4 — FM-1 emulator</title>
 <meta name="theme-color" content="#101114">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,6 +15,7 @@
     --txt: #c9cdd4;
     --dim: #70757d;
     --accent: #e8b84b;
+    --play: #63ff42;
     /* safe-area insets, readable from JS (fitDevice) */
     --sat: env(safe-area-inset-top, 0px);
     --sab: env(safe-area-inset-bottom, 0px);
@@ -88,6 +89,8 @@ body.compact .cap .grab { display: block; }
 }
 .btn.down { box-shadow: 0 1px 2px rgba(0,0,0,.5); background: linear-gradient(#2a2d33, #1d2024); }
 .btn.lit { color: #fff; box-shadow: 0 0 14px 2px rgba(240,220,160,.45), inset 0 1px 0 rgba(255,255,255,.1); background: linear-gradient(#5a5341, #3c3831); }
+.btn.play { color: var(--play); }
+.btn.play.lit { box-shadow: 0 0 14px 2px rgba(99,255,66,.45), inset 0 1px 0 rgba(255,255,255,.1); background: linear-gradient(#314d2a, #233520); }
 .btn.glow { box-shadow: 0 0 8px 0 rgba(240,220,160,.2), 0 2px 4px rgba(0,0,0,.5); }
 .btn kbd { position: absolute; top: 1px; right: 4px; font-size: 8px; color: #565b63; }
 
@@ -107,6 +110,7 @@ body.compact .cap .grab { display: block; }
 .pill i { position: absolute; bottom: 6%; left: 0; right: 0; text-align: center; font-size: 8px; color: #8a877d; font-style: normal; letter-spacing: 0; }
 .pill.down { background: linear-gradient(#d2cfc8, #c1beb5); }
 .pill.lit .slot { background: #ffd467; box-shadow: 0 0 12px 3px rgba(255,212,103,.75), inset 0 0 2px rgba(120,80,0,.6); }
+.pill.wk.lit .slot { background: var(--play); box-shadow: 0 0 12px 3px rgba(99,255,66,.75), inset 0 0 2px rgba(20,80,0,.6); }
 .pill.glow .slot { background: #6b5c2e; box-shadow: 0 0 5px 1px rgba(255,212,103,.25); }
 .pill kbd { position: absolute; top: 4%; left: 6%; font-size: 8px; color: #a5a299; }
 .pill.bk kbd { color: #a5a299; }
@@ -283,18 +287,19 @@ body.compact #manual { display: none; }
 </style>
 </head>
 <body>
-<h1 id="title">MC-1 0.1.3 · FM-1 emulator</h1>
+<h1 id="title">MC-1 0.1.4 · FM-1 emulator</h1>
 <button id="fs" aria-label="Toggle fullscreen">⛶</button>
 <div id="fstip"><div class="card"><h2>FULLSCREEN</h2><p>Use Share → Add to Home Screen on iPhone.</p><span class="ok">GOT IT</span></div></div>
-<div id="device"><div id="power"><div class="ring">⏻</div><span>POWER ON</span><small>MC-1 0.1.3 · actual C engine and screen · sound on</small></div></div>
+<div id="device"><div id="power"><div class="ring">⏻</div><span>POWER ON</span><small>MC-1 0.1.4 · actual C engine and screen · sound on</small></div></div>
 <div id="help"><b>MC-1 ONLY</b> · Drag or scroll knobs · Space: PLAY · R: REC · 1–0: panel buttons · Z/X: octave · Arrow keys: part/preset<br>
 
 <a href="https://github.com/dspaudio/mc-1-web">Emulator source</a> · <a href="https://github.com/dspaudio/mc-1">Firmware and complete preset list</a></div>
-<span id="status">MC-1 0.1.3 · POWER ON to start</span>
+<span id="status">MC-1 0.1.4 · POWER ON to start</span>
 <section id="manual"><h2>PLAY MC-1</h2><div class="cards">
-<div class="card"><h3>NEON SPIRAL / EFFECTS</h3><p>While stopped: press GLO three times, turn KNOB4 clockwise to load NEON SPIRAL, then PLAY. Loading replaces the working project. HOME then FX opens the selected track's DELAY / REVERB / DRIVE / CHORUS. Press FX again for master effects; SELECT changes the track.</p></div>
-<div class="card"><h3>PARTS AND SOUNDS</h3><p>SELECT chooses three melodic parts or drums. PRESETS browses 128 melodic presets grouped by sound family, including 64 recorded-instrument PCM presets, or eight drum kits; ALGORITHM queues one of four patterns. ARP mutes the selected part. GLO opens the four-part mixer, then groove controls, then the demo library. HOME gives cutoff, resonance, decay and PCM/glide; pitch marks show the current phrase.</p></div>
+<div class="card"><h3>NEON SPIRAL / EFFECTS</h3><p>While stopped: press GLO three times, turn KNOB4 clockwise to load NEON SPIRAL, then PLAY. Loading replaces the working project. HOME then FX opens track effects; press FX again for master. ENV cycles AMOUNT / TYPE / FILTER: four delays, four reverbs, soft/hard/fold/fuzz drive, chorus/phaser/flanger, and HPF (low-cut) / LPF (high-cut).</p></div>
+<div class="card"><h3>PARTS AND SOUNDS</h3><p>SELECT chooses three melodic parts or drums. PRESETS opens a 128-preset or eight-kit list that closes after 0.5 seconds without input. Turn slowly for fine changes and quickly for larger jumps. ALGORITHM queues patterns. Modified sounds retain their preset name with *. GLO cycles MIXER / GROOVE / DEMO / AUTOMATION. In MIXER: SELECT-ARP to mute. Orange marks selection; bright green marks playback and active states.</p></div>
+<div class="card"><h3>ARP / RECORDING</h3><p>ARP opens the melodic arpeggiator: MODE / RATE / OCT / GATE; LFO toggles latch. Choose UP, DOWN, UPDOWN, ORDER, RANDOM or CHORD. REC with PLAY records generated notes and sound, mixer and effect knob changes on the 16-step grid. GLO's AUTOMATION page shows event capacity; EDIT clears the current pattern's automation.</p></div>
 <div class="card"><h3>STEP EDIT / DRUMS</h3><p>EDIT toggles note entry; keys enter a note at the selected step. Drum knobs select SOUND / STEP / HIT / LEVEL. ENV adjusts melodic ADSR. REC records live notes quantized to the current step.</p></div>
 <div class="card"><h3>SAVE AND LIMITS</h3><p>SAVE twice while stopped writes the actual C A/B project format to emulated flash, persisted in IndexedDB. Reload restores it. Browser storage can be cleared by your browser. This is a behavioral FM-1 emulator, not a pi32v2 CPU or timing simulator. No USB, MIDI, calibration, firmware flashing or hardware guarantees.</p></div></div>
 <p class="src">FM-1 faceplate, input and AudioWorklet infrastructure adapted from <a href="https://github.com/dspaudio/orbit-web-emu">ORBIT web emulator</a>, originally <a href="https://github.com/sabliran/sloop-web-emu">SLOOP web emulator</a>. Code: GPL-3.0-only. Recorded instruments: <a href="https://github.com/sgossner/VSCO-2-CE">VSCO 2 Community Edition</a>, <a href="samples-LICENSE.txt">CC0-1.0</a> (<a href="recorded-samples.json">sample sources</a>). Only MC-1 firmware is included; no Roland ROMs or samples. Not affiliated with Roland or M-VAVE.</p></section>
-<script src="emu.js?v=0.1.3"></script></body></html>
+<script src="emu.js?v=0.1.4"></script></body></html>

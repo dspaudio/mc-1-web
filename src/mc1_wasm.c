@@ -54,11 +54,13 @@ API("emu_input") void emu_input(uint32_t nn,uint32_t bb){
  for(unsigned i=0;i<14;i++)if((bb&~buttons)&(1u<<i))mc_ui_button(&engine,&ui,map[i]);
  for(unsigned i=0;i<27;i++)if((nn^notes)&(1u<<i)){
  if(nn&(1u<<i)){held_part[i]=engine.selected;int n=53+(int)i+ui.octave*12;held_note[i]=(uint8_t)(n<12?12:n>108?108:n);mc_ui_key(&engine,&ui,i,1);}
- else if(held_part[i]<3)mc_off(&engine,held_part[i],held_note[i]);
+ else {ui.preset_popup=ui.encoder_active=0;if(held_part[i]<3)mc_key(&engine,held_part[i],held_note[i],100,0);}
  }
  notes=nn;buttons=bb;service();
 }
 API("emu_enc") void emu_enc(unsigned e,int step){static const uint8_t map[7]={0,1,3,4,5,6,2};if(e<7)mc_ui_encoder(&engine,&ui,map[e],step);service();}
+API("emu_enc_at") void emu_enc_at(unsigned e,int step,uint32_t now_ms){static const uint8_t map[7]={0,1,3,4,5,6,2};if(e<7)mc_ui_encoder_at(&engine,&ui,map[e],step,now_ms);service();}
+API("emu_ui_tick") void emu_ui_tick(uint32_t now_ms){mc_ui_tick(&ui,now_ms);}
 API("emu_adc_set") void emu_adc_set(unsigned ch,int v){if(ch==4)master=v<0?0:v>1023?1023:v;}
 API("emu_fb_ptr") uintptr_t emu_fb_ptr(void){return (uintptr_t)fb;}
 API("emu_fb_gen") uint32_t emu_fb_gen(void){return fb_gen;}
@@ -69,7 +71,16 @@ API("emu_flash_ptr") uintptr_t emu_flash_ptr(void){return (uintptr_t)flash;}
 API("emu_flash_size") unsigned emu_flash_size(void){return sizeof flash;}
 API("emu_flash_gen") uint32_t emu_flash_gen(void){return flash_gen;}
 /* Read-only test diagnostics, also useful for browser bug reports. */
-API("emu_state") uint32_t emu_state(unsigned k){switch(k){case 0:return engine.project.bpm;case 1:return engine.selected;case 2:return ui.page;case 3:return engine.project.demo;case 4:return engine.playing;case 5:return engine.project.fx[0];case 6:return ui.preset[engine.selected<3?engine.selected:0];case 7:return engine.project.patch[0].cutoff;case 8:return engine.project.drum_kit;case 9:return engine.pattern;case 10:case 11:case 12:case 13:return engine.project.track_fx[engine.selected][k-10];default:return 0;}}
+API("emu_state") uint32_t emu_state(unsigned k){
+ unsigned p=engine.selected<3?engine.selected:0;
+ switch(k){case 0:return engine.project.bpm;case 1:return engine.selected;case 2:return ui.page;case 3:return engine.project.demo;case 4:return engine.playing;case 5:return engine.project.fx[0];case 6:return ui.preset[p];case 7:return engine.project.patch[0].cutoff;case 8:return engine.project.drum_kit;case 9:return engine.pattern;case 10:case 11:case 12:case 13:return engine.project.track_fx[engine.selected][k-10];case 14:return ui.preset_popup;
+ case 15:return engine.arp[p].events;case 16:return engine.project.arp[p].enabled;
+ case 17:return engine.project.arp[p].mode;case 18:return engine.project.arp[p].rate;
+ case 19:return engine.project.arp[p].octaves;case 20:return engine.project.arp[p].gate;
+ case 21:return engine.project.arp[p].latch;case 22:return engine.project.automation_count;
+ case 23:return engine.automation_full;case 24:return engine.step;case 25:return engine.project.preset[p];default:return 0;}
+}
+API("emu_parameter") int emu_parameter(unsigned part,unsigned parameter){return mc_parameter_get(&engine,part,parameter);}
 
 #ifdef __wasm__
 #include <stddef.h>

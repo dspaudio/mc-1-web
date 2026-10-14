@@ -1,22 +1,22 @@
 {
   "repository": "https://github.com/dspaudio/mc-1",
-  "commit": "7a4c04c5834fc403337c38fa4383c2a5fe99eb0e",
+  "commit": "71f514ef2f0657eeff111bc48245dd3a0363b1ed",
   "files": {
     "core/LICENSES/CC0-VSCO.txt": "36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673",
     "core/assets/recorded/manifest.json": "47acfab4d4b9e4c8daec2734101e4f91a5b348960d62d3e418bccabc1ed53b11",
-    "core/host/bridge.c": "66202b4359beddf392ccc0b3269ebcccebcc83a2646e9fa282e112c3ff2ed88c",
+    "core/host/bridge.c": "92cf47fb6a937c8dd63d7a8f0dd782cf8accd168c2f3973dadbfff05e9a340af",
     "core/src/demo.c": "6da79e086eaefa58cac8421bec2385229523e961577f5b1f7f5ca15ea3564fca",
-    "core/src/effects.c": "0f8fe56b8e04aa6777d5dccd4234b348ea2b842ee35ad9ba9238aefb2528d25f",
-    "core/src/engine.c": "321b11aaf43bcab38d9bda61e04617f1f4042fff534984c326f6bfdb8df8a088",
-    "core/src/factory.c": "6fbdd36c5efbc46dc82a6f19cc6e9879361b7c1f7aed4035a51d6f3a076849a5",
-    "core/src/mcfm.h": "0f409a990c4236782cd80c0ce16a5bdf9a68481df2221e9d22a593449df44903",
+    "core/src/effects.c": "f8c71e95307938741643c1070df0c413aa500172bbccb7584c680a8258a5d08b",
+    "core/src/engine.c": "8750e2b8e6f53f8fbf831dcf1635354dacef8534f46bb68f7bd6c6d8b3dcbdc8",
+    "core/src/factory.c": "90dddccb6aac2cc80922192c92c402fa34135d6cfb6b41b992a3b450cffced2a",
+    "core/src/mcfm.h": "8d6f942a99334fc347fda3b51736e4cc2e9eb264015cad88c54b0cbc308d437b",
     "core/src/presets.h": "4a0067dcaed8e43a529212589d38d61ac1766749e5f3d0123d0ec5c09eb5cb23",
-    "core/src/project.c": "05d9c575be5635a1befc18e56c174c473315b0d47e1509acbcfa5a6567d9b6cf",
+    "core/src/project.c": "919bb79e26128ea497a6fdfac56e25e8cf293cfe0edb211b8b4f36096ff0d594",
     "core/src/recorded_pcm.h": "61c3a354aa9f00d76a9ed057bc37952068666913b60261c4480cb963944fd178",
     "core/src/store.c": "47f07f755c7dcc71e5b21d607cda857df2edc4d396605a3eb88992cf8aa9c990",
     "core/src/store.h": "b8a9f9b75a2e16cb9b84d01282d807e20cd5ede0a05d33aba6f075b1206ac657",
     "core/src/tables.h": "9754b4e09ccfb7c9861f26176065a708a2809f854ad10c524dc83fd7c289d6fe",
-    "core/src/ui.c": "203255d8942ce5bdcf82d67a93dce93e3a490c15ea82d2cbe3b4b4262d8da372",
-    "core/src/ui.h": "8db4e2556e135095fddb5bb8844230ff52aa6cd0ea68b01c451088d24d44a3c8"
+    "core/src/ui.c": "e4670095dd2cba39f82a4d00c231c0c6fbe8680c03e74da077b85837d1b85584",
+    "core/src/ui.h": "6830477b8a7f7a9fe97b6d946e18a2a63acde6543b69ad42d3291ece1baa307f"
   }
 }

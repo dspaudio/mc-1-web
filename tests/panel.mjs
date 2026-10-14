@@ -5,6 +5,12 @@ import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 
 const source = fs.readFileSync('site/emu.js', 'utf8');
+const html = fs.readFileSync('site/index.html', 'utf8');
+assert.match(html, /--play:\s*#63ff42\s*;/, 'panel uses the bright green playback color');
+assert.match(source, /if\s*\(fw\s*===\s*'PLAY'\)\s*b\.classList\.add\('play'\)/, 'only PLAY receives the dedicated green button class');
+assert.match(html, /\.btn\.play\.lit\s*\{[^}]*rgba\(99,255,66/, 'lit PLAY uses green feedback');
+const greenKeyRules = Array.from(html.matchAll(/([^{}]+)\{([^{}]+)\}/g)).filter(([, selector, body]) => selector.includes('.pill') && body.includes('var(--play)'));
+assert.deepEqual(greenKeyRules.map(([, selector]) => selector.trim()), ['.pill.wk.lit .slot'], 'green sequencer-key styling is limited to white keys');
 const panel = vm.runInNewContext(
     source.slice(0, source.indexOf('let node =')) + '\n({ BTN, KEYMAP, WHITE_IDS, BLACK_IDS });',
     { document: { getElementById: () => ({}) } },
@@ -99,8 +105,8 @@ for (let part = 0; part < 3; part++) {
     tap(e, 'SAVE'); tap(e, 'SAVE');
     assert(e.emu_flash_gen() > 0, 'panel notes must be saved successfully');
     const saved = new Uint8Array(e.memory.buffer, e.emu_flash_ptr(), e.emu_flash_size());
-    assert.equal(saved[4], 3, 'the saved project uses format version 3');
-    // Format v3 keeps the 20-byte header, 72-byte settings and 8-byte steps.
+    assert.equal(saved[4], 4, 'the saved project uses format version 4');
+    // Format v4 keeps the 20-byte header, 72-byte settings and 8-byte steps.
     const notes = Array.from({ length: 7 }, (_, step) => saved[20 + 72 + part * 16 * 8 + step * 8]);
     assert.deepEqual(notes, [60, 72, 60, 48, 24, 96, 108], `OCT buttons transpose part ${part + 1} and clamp at +/-3`);
     octaveNotes.push(notes);
@@ -147,6 +153,39 @@ tap(e, 'PLAY');
 assert.deepEqual(litKeys(e), [], 'stopping clears the sequencer and PLAY LEDs');
 console.log(JSON.stringify({ scenario: '16 white sequencer LEDs, wraparound, PLAY/REC/STOP', sequence, pass: true }));
 
+const colors = boot();
+const factoryImage = saveFlash(colors);
+tap(colors, 'PLAY'); colors.emu_render(1);
+let coloredHits = 0, uncoloredRests = 0;
+for (let step = 0; step < 16; step++) {
+    for (let block = 0; colors.emu_state(24) !== step && block < 1000; block++) colors.emu_render(128);
+    assert.equal(colors.emu_state(24), step);
+    colors.emu_frame();
+    const pixels = new Uint16Array(colors.memory.buffer, colors.emu_fb_ptr(), 240 * 240);
+    assert(pixels.includes(0xfb20), 'orange selection remains alongside green playback');
+    for (let part = 0; part < 4; part++) {
+        const offset = 92 + part * 128 + step * 8;
+        const active = part === 3 ? factoryImage[offset + 6] || factoryImage[offset + 7] : factoryImage[offset + 3] && factoryImage.slice(offset, offset + 3).some(Boolean);
+        const pixel = pixels[(60 + part * 27) * 240 + 30 + step * 13];
+        if (active) { assert.equal(pixel, 0x67e8, 'audible current steps are bright green'); coloredHits++; }
+        else { assert.notEqual(pixel, 0x67e8, 'rests do not falsely light green'); uncoloredRests++; }
+    }
+}
+assert(coloredHits > 0 && uncoloredRests > 0);
+for (let block = 0; colors.emu_state(24) !== 0 && block < 1000; block++) colors.emu_render(128);
+assert.equal(colors.emu_state(24), 0);
+assert(factoryImage[92] && factoryImage[95], 'mute check uses an active melodic step');
+tap(colors, 'GLO'); tap(colors, 'ARP'); tap(colors, 'HOME'); colors.emu_frame();
+assert.notEqual(new Uint16Array(colors.memory.buffer, colors.emu_fb_ptr(), 240 * 240)[60 * 240 + 30 + colors.emu_state(24) * 13], 0x67e8, 'muted melodic track does not show a green hit');
+colors.emu_enc(0, 3); colors.emu_frame();
+assert.equal(new Uint16Array(colors.memory.buffer, colors.emu_fb_ptr(), 240 * 240)[25 * 240 + 30], 0x67e8, 'an unmuted sounding drum lane is bright green');
+tap(colors, 'GLO'); tap(colors, 'ARP'); tap(colors, 'HOME'); colors.emu_frame();
+const mutedDrums = new Uint16Array(colors.memory.buffer, colors.emu_fb_ptr(), 240 * 240);
+for (let lane = 0; lane < 16; lane++) assert.notEqual(mutedDrums[(25 + lane * 9) * 240 + 30 + colors.emu_state(24) * 13], 0x67e8, 'muted drum lanes do not show green hits');
+tap(colors, 'PLAY'); colors.emu_frame();
+assert(!new Uint16Array(colors.memory.buffer, colors.emu_fb_ptr(), 240 * 240).includes(0x67e8), 'stopping removes playback green');
+console.log(JSON.stringify({ scenario: 'bright green active steps, orange selection, rest/mute/stop semantics and white-only green panel selectors', coloredHits, uncoloredRests, pass: true }));
+
 const mixer = boot();
 tap(mixer, 'GLO');
 assert.equal(mixer.emu_state(2), 5, 'GLO opens the global mixer');
@@ -170,6 +209,7 @@ const restoredFlash = new Uint8Array(restoredMixer.memory.buffer, restoredMixer.
 assert.deepEqual(Array.from(restoredFlash.slice(4096 + 60, 4096 + 64)), [0, 127, 0, 127], 'mixer levels survive save and reboot');
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 2);
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 4);
+tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 7);
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 5);
 console.log(JSON.stringify({ scenario: 'global mixer knobs, saved levels and GLO page cycle', pass: true }));
 
@@ -194,7 +234,7 @@ for (let kit = 0; kit < 8; kit++) {
     drums.emu_enc(6, kit);
     assert.equal(drums.emu_state(8), kit, `PRESETS selects kit ${kit + 1}`);
     const saved = saveFlash(drums);
-    assert.equal(saved[23], kit, 'format v3 stores the kit in the former reserved byte');
+    assert.equal(saved[23], kit, 'format v4 preserves the stored kit byte');
     const restored = boot(saved);
     restored.emu_enc(0, 3);
     assert.equal(restored.emu_state(8), kit, `kit ${kit + 1} survives save and reboot`);
@@ -225,8 +265,8 @@ trackFx[0][0]++;
 assert.equal(fx.emu_state(10), 11, 'HOME then FX returns to selected-track scope');
 assert.equal(fx.emu_state(5), 19);
 const fxFlash = saveFlash(fx);
-assert.equal(fxFlash[4], 3);
-assert.equal(fxFlash[6] + fxFlash[7] * 256, 2136, 'v3 appends 16 track-FX bytes');
+assert.equal(fxFlash[4], 4);
+assert.equal(fxFlash[6] + fxFlash[7] * 256, 3726, 'v4 includes performance settings and automation');
 assert.deepEqual(Array.from(fxFlash.slice(2140, 2156)), trackFx.flat(), 'all 16 track-FX parameters are serialized');
 const restoredFx = boot(fxFlash);
 assert.equal(restoredFx.emu_state(5), 19, 'master FX survives reboot');
@@ -234,7 +274,7 @@ for (let part = 0; part < 4; part++) {
     assert.deepEqual(Array.from({ length: 4 }, (_, knob) => restoredFx.emu_state(knob + 10)), trackFx[part], `part ${part + 1} FX survives reboot`);
     restoredFx.emu_enc(0, 1);
 }
-console.log(JSON.stringify({ scenario: 'selected-track FX independence, master toggle, HOME reset and v3 save/reboot', trackFx, pass: true }));
+console.log(JSON.stringify({ scenario: 'selected-track FX independence, master toggle, HOME reset and v4 save/reboot', trackFx, pass: true }));
 
 // Captured from the original v2 WASM writer: factory project, BPM 137 and delay 37.
 const legacyV2 = inflateSync(Buffer.from('eJzNkUFKw1AQhv8ExVKELlyIOzcuaimEQnlWguYRLaFJSFoalGzcvI07waUn8EaewQt4BW+hqZ1q/CMEfJvOZpiZ75/Nl4bT1EXUcQA8vRwMXt/fPp7RxWr2SkcNu8oA7pHqlfmdQQHXuTcdx/RKGBMbE5zeBobqBOsaAo/a+eqFxq8OzXcXmDQ5q/zEDxKD/5dt/hrIVW1OAFOf50Cp/uAT2UfEJ8TP6f9S+Oxn/zDC7qoXo/Vc9Z36XN33Wu5t+UO673/PffHTFx+1Ds33yt+4yVnlx2e+lT/bvCY/7DMlnxs+kv0V8RHxKf3PhY+3xL8nfjzxUevQfK/8+U3OKu9fhlb+bPMR+cnI55J8bvhM9jHxGfFL+n8j/GJL/A/Ez0B81Do03yt/qslZ5dX5hZU/23xIfmYtPjf8TPZT4mfEZ/R/IXy6Ff6P8QkT/pff', 'base64'));

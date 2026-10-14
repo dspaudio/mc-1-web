@@ -17,6 +17,8 @@ jobs:
           node tests/worklet.mjs
           node tests/startup.mjs
           node tests/panel.mjs
+          node tests/controls.mjs
+          node tests/performance.mjs
           rm build/native.json
       - uses: actions/upload-artifact@v4
         with:

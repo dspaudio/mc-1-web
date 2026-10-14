@@ -1,8 +1,22 @@
-# MC-1 web emulator 0.1.3
+# MC-1 web emulator 0.1.4
 
 An FM-1 faceplate emulator running the original MC-1 C DSP, sequencer, UI and A/B project storage in an AudioWorklet. Adapted from [dspaudio/orbit-web-emu](https://github.com/dspaudio/orbit-web-emu).
 
 Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector. Browser flash uses its own `mc1-emu-v1` IndexedDB database.
+
+## Added and changed in 0.1.4
+
+- Added faster encoder turns and a large PRESETS list that applies the selection
+  immediately and closes after 500 ms without another turn.
+- Added four delay, four reverb, four drive and three modulation types, plus
+  independent high-pass and low-pass filters for each track and the master.
+- Added six arpeggiator modes with rate, octave, gate and latch controls, and
+  recording of the generated notes into the sequencer.
+- Added 384 step-quantized parameter automation events per project.
+- Edited sounds retain their originating preset name with `*`. Bright green
+  indicates playback and active states alongside orange selection highlights.
+- Format v4 saves these settings and imports v1, v2 and v3 projects. Earlier
+  firmware cannot load a project saved in v4.
 
 ## Added and changed in 0.1.3
 
@@ -31,18 +45,61 @@ Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector.
 
 Press POWER ON, then PLAY. For NEON SPIRAL: stop, GLO three times, KNOB4 clockwise, PLAY. SELECT chooses a part; PRESETS chooses a melodic preset or, with DRUMS selected, a drum kit. ALGORITHM queues patterns on every part. SAVE twice while stopped stores the project locally; reload restores it, including the selected kit and effects.
 
-HOME then FX opens the selected part's delay, reverb, drive and chorus controls.
+PRESETS opens a large list of nearby sounds or drum kits. Each turn applies the
+highlighted sound immediately; no confirmation is needed. The list closes after
+500 ms without another turn, even while playback is stopped. Other encoder,
+button or keyboard input closes it immediately.
+
+Repeat a turn in the same direction within 60 ms to move continuous parameters
+and the 128-sound list three times faster; tempo moves six times faster. Slow
+turns, direction changes and switching controls return to one step. Short lists,
+including parts, patterns and drum kits, always move one choice per step.
+
+HOME then FX opens the selected part's delay, reverb, drive and modulation controls.
 The four knobs edit that part only, including DRUMS. Press FX again to switch
 between track and master effects; HOME then FX always returns to track effects.
-All four parts' settings and the master effects are saved with the project.
+ENV cycles AMOUNTS → TYPES → FILTERS. In AMOUNTS and TYPES, knobs 1–4 control
+delay, reverb, drive and modulation. In FILTERS, knob 1 is HPF and knob 2 is LPF;
+zero bypasses each filter. All four parts' settings and master effects are saved.
 
-GLO cycles through GLOBAL MIXER, GROOVE CONTROL and DEMO LIBRARY. In the mixer,
+| Effect | Types |
+|---|---|
+| Delay | DIGITAL, TAPE, PINGPONG, MULTITAP |
+| Reverb | ROOM, HALL, PLATE, SPRING |
+| Drive | SOFT, HARD, FOLD, FUZZ |
+| Modulation | CHORUS, PHASER, FLANGER |
+
+Outside the mixer, ARP opens the selected melodic part's arpeggiator page;
+press ARP again to return HOME. Knobs 1–4 select MODE, RATE, OCT and GATE.
+MODE offers OFF, UP, DOWN, UP-DOWN, ORDER, RANDOM and CHORD. RATE offers quarter,
+eighth and sixteenth notes; OCT spans 1–3 octaves and GATE spans 1–100%.
+LFO toggles LATCH so notes continue after keys are released. Changing MODE or
+LATCH releases the current held notes; press keys again to play. With PLAY and
+REC enabled, the generated notes are recorded into the pattern, including tied
+steps for longer gates. The arpeggiator is available on the three melodic parts.
+
+GLO cycles through GLOBAL MIXER, GROOVE CONTROL, DEMO LIBRARY and KNOB AUTOMATION. In the mixer,
 the four knobs adjust PART 1, PART 2, PART 3 and DRUM levels independently.
 SELECT chooses a part and ARP mutes it; the mixer displays level and mute state.
 The mixer reminder reads `SELECT-ARP to mute`.
+
+To record knob automation, enable PLAY and REC, then turn sound, mixer or effect
+controls. Values are quantized to the current sixteenth-note step and replayed
+with that pattern. The 384-event capacity is shared by all four patterns, four
+tracks and the master; changing the same parameter at the same step replaces
+its event. KNOB AUTOMATION shows the count and recording state. EDIT on this
+page clears only the current pattern's automation. At capacity, existing events
+can still be changed; a new event shows AUTOMATION FULL and is not recorded.
+
+An edited sound keeps its originating preset name with `*`; restoring the
+original parameters removes the marker. The name and marker survive save/load.
+Older custom patches with no recoverable preset name display IMPORTED SOUND.
 HOME shows pitch marks inside melodic steps so phrase changes remain visible
 even when their rhythms match. Above the knobs, PATTERN shows the current pattern
 and NEXT shows a queued change until the bar boundary. Status messages take priority.
+Orange marks selections. Bright green marks sounding steps and enabled ARP/LATCH
+states; rests and muted tracks do not show a green hit. PLAY and the sixteen
+white-key step LEDs also use bright green.
 
 OCT− / OCT+ transpose the melodic keyboard by one octave, up to three octaves
 in either direction. The corresponding button lights below or above the default
@@ -57,6 +114,10 @@ the sixteen white-key step LEDs, preset and kit selection boundaries, distinct
 kit audio, kit save/reboot, independent track effects and older project imports.
 All 64 recorded instrument presets are checked for native/WASM PCM parity
 before and after saving and reloading.
+Timestamped control tests also check acceleration, popup selection and the
+500 ms deadline through both the C UI and real AudioWorklet message handling.
+Performance tests cover effect types and filters, ARP recording, automation
+capacity/replay/clearing, preset-name preservation and v4 save/load.
 These checks do not establish browser rendering or physical-device behavior.
 
 Browser behavior is not FM-1 hardware verification. CPU timing, physical I/O, bootloader, calibration, USB/MIDI and real flash are not emulated. Hardware installation remains unverified. Browser saved data may be cleared by browser settings.
@@ -331,7 +392,7 @@ Select DRUMS with SELECT, then turn PRESETS to choose a kit. ALGORITHM continues
 to choose patterns. Kits share the sixteen lane roles below, so a pattern can be
 played with any kit. Projects saved by older MC-1 versions load with BASE 808,
 dry track effects and their original master effects; saving upgrades the project
-to format v3.
+to format v4.
 
 | # | Kit name | Synthesis character |
 |---|---|---|

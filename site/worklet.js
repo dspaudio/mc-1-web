@@ -33,7 +33,7 @@ class SloopProcessor extends AudioWorkletProcessor {
             if (m.t === 'input') {
                 this.e.emu_input(m.notes,m.buttons);
             }
-            else if (m.t === 'enc') this.e.emu_enc(m.e, m.steps);
+            else if (m.t === 'enc') this.e.emu_enc_at(m.e, m.steps, (currentTime * 1000) >>> 0);
             else if (m.t === 'start') this.e.emu_start();
             else if (m.t === 'adc') this.e.emu_adc_set(m.ch, m.v);
             
@@ -59,6 +59,7 @@ class SloopProcessor extends AudioWorkletProcessor {
 
     process(inputs, outputs) {
         if(this.failed) return false;
+        this.e.emu_ui_tick((currentTime * 1000) >>> 0);
         const out = outputs[0];
         const n = out[0].length;             // 128
         this.e.emu_render(n);
