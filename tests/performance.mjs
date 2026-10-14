@@ -79,9 +79,9 @@ for (let scope = 0; scope < 5; scope++) {
 const effectsSave = save(effects);
 const restoredEffects = boot(effectsSave.image);
 for (let scope = 0; scope < 5; scope++) for (let parameter = 14; parameter <= 23; parameter++) {
-    assert.equal(restoredEffects.emu_parameter(scope, parameter), effects.emu_parameter(scope, parameter), 'all FX types, amounts and filters survive v5 reload');
+    assert.equal(restoredEffects.emu_parameter(scope, parameter), effects.emu_parameter(scope, parameter), 'all FX types, amounts and filters survive v6 reload');
 }
-console.log(JSON.stringify({ scenario: 'five independent FX scopes, 4/4/4/3 type choices, HPF/LPF and v5 save/reload', pass: true }));
+console.log(JSON.stringify({ scenario: 'five independent FX scopes, 4/4/4/3 type choices, HPF/LPF and v6 save/reload', pass: true }));
 
 const arpAudio = [];
 for (let mode = 0; mode < 6; mode++) {
@@ -123,7 +123,7 @@ for (let step = 0; step < 16; step++) {
         assert.equal(data[4], 100); assert.equal(data[5], step % 4 ? 4 : 0, 'long gates use tied sixteenth steps');
     } else assert.deepEqual(data, Array(8).fill(0), 'the remainder of a quarter-note gate is silent');
 }
-console.log(JSON.stringify({ scenario: 'six ARP modes, rate/octave/gate settings, latch, melodic-only scope, generated chord REC and v5 settings reload', arpAudio, pass: true }));
+console.log(JSON.stringify({ scenario: 'six ARP modes, rate/octave/gate settings, latch, melodic-only scope, generated chord REC and v6 settings reload', arpAudio, pass: true }));
 
 const automation = boot(); tap(automation, 'REC'); tap(automation, 'PLAY'); automation.emu_render(1);
 for (let step = 0; step < 16; step++) {
@@ -165,7 +165,7 @@ for (let i = 0; i < 4; i++) tap(patterns, 'GLO'); tap(patterns, 'EDIT');
 assert.equal(patterns.emu_state(22), 1, 'clearing one pattern preserves automation in another pattern');
 const remaining = save(patterns).record;
 assert.equal(recordEvents(remaining)[0][0], 0); assert.equal(recordEvents(remaining)[0][2], 4, 'the retained event is the first pattern sound cutoff');
-console.log(JSON.stringify({ scenario: '384 step-quantized automation events, track/master/mix capture, overwrite/full, replay, pattern-only clear and v5 reload', pass: true }));
+console.log(JSON.stringify({ scenario: '384 step-quantized automation events, track/master/mix capture, overwrite/full, replay, pattern-only clear and v6 reload', pass: true }));
 
 const origin = boot(); const preset = origin.emu_state(25); const original = frame(origin); const initialCutoff = origin.emu_state(7);
 origin.emu_enc(2, 1); const changed = frame(origin);
@@ -177,4 +177,4 @@ const restoredOrigin = boot(originSave.image); assert.equal(restoredOrigin.emu_s
 assert.deepEqual(region(frame(restoredOrigin), 8, 30, 108, 14), region(changed, 8, 30, 108, 14), 'preset name and asterisk survive save/reload');
 restoredOrigin.emu_enc(2, initialCutoff - restoredOrigin.emu_state(7));
 assert.deepEqual(region(frame(restoredOrigin), 8, 30, 108, 14), region(original, 8, 30, 108, 14), 'returning to original parameters removes the asterisk');
-console.log(JSON.stringify({ scenario: 'originating preset name and changed marker survive editing and v5 reload', pass: true }));
+console.log(JSON.stringify({ scenario: 'originating preset name and changed marker survive editing and v6 reload', pass: true }));

@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: GPL-3.0-only
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+import {FORMAT,latestRecord} from './format.mjs';
+const native=JSON.parse(fs.readFileSync('build/midi-native.json'));
+let Processor;const posted=[];
+const clock={AudioWorkletProcessor:class{constructor(){this.port={postMessage:m=>posted.push([this,m])};}},WebAssembly,currentTime:0,registerProcessor:(name,p)=>Processor=p};
+vm.runInNewContext(fs.readFileSync('site/worklet.js','utf8'),clock);
+const module=new WebAssembly.Module(fs.readFileSync('build/mc1.wasm'));
+const boot=image=>new Processor({processorOptions:{wasmModule:module,flashImage:image?.buffer}});
+const send=(p,m)=>p.port.onmessage({data:m});
+const tap=(p,b)=>{send(p,{t:'input',notes:0,buttons:1<<b});send(p,{t:'input',notes:0,buttons:0});};
+const turn=(p,e,steps)=>{clock.currentTime+=1;send(p,{t:'enc',e,steps});};
+const input=(p,...messages)=>send(p,{t:'midi-input',epoch:1,messages});
+const byteHash=(bytes,hash=2166136261)=>bytes.reduce((h,b)=>Math.imul(h^b,16777619)>>>0,hash);
+let audioHash=2166136261,outputHash=2166136261,energy=0,outCount=0;const outputPackets=[];
+function blocks(p,n=1,ack=true){
+ for(let b=0;b<n;b++){
+  clock.currentTime+=128/44100;const output=[new Float32Array(128),new Float32Array(128)];assert(p.process([],[output]));
+  for(let i=0;i<128;i++)for(let c=0;c<2;c++){const sample=output[c][i];assert(Number.isFinite(sample)&&Math.abs(sample)<1);energy+=sample*sample;const pcm=Math.round(sample*32768)&65535;audioHash=byteHash([pcm&255,pcm>>8],audioHash);}
+  for(const [owner,m]of posted.splice(0))if(owner===p&&m.t==='midi-output'){
+   assert(m.messages.length<=272);outputPackets.push(...m.messages);outCount+=m.messages.length;
+   for(const value of m.messages)outputHash=byteHash([value&255,value>>>8&255,value>>>16&255,value>>>24],outputHash);
+   if(ack)send(p,{t:'midi-output-ack'});
+  }
+ }
+}
+const p=boot();assert(!p.failed);while(p.e.emu_midi_pop()){}
+input(p,[0xc0,60],[0xb0,74,100],[0xe0,0,80],[0x90,60,100]);blocks(p,32);
+assert.equal(p.e.emu_state(25),60);assert.equal(p.e.emu_parameter(0,4),100);assert(energy>0.01);
+input(p,[0xb0,64,127],[0x80,60,0]);blocks(p,16);
+send(p,{t:'midi-reset',epoch:2});blocks(p,256);assert.equal(outCount,0,'incoming program/CC/note/pitch/sustain is not echoed');
+send(p,{t:'input',notes:1<<7,buttons:0});blocks(p,8);send(p,{t:'input',notes:0,buttons:0});blocks(p,8);
+assert(outCount>=2,'panel notes reach the output');assert.equal(audioHash,native.audioHash,'actual worklet MIDI PCM matches native byte-for-byte');assert.equal(outputHash,native.outputHash,'actual worklet output packets match native');
+const audioResult={audioHash,outputHash,energy};
+const rec=boot();turn(rec,1,63);tap(rec,13);tap(rec,12);input(rec,[0x90,67,101],[0x99,36,110]);blocks(rec);tap(rec,12);tap(rec,13);
+tap(rec,11);assert.equal(rec.e.emu_state(2),8);assert.equal(rec.e.emu_state(32),1);
+turn(rec,3,63);assert.equal(rec.e.emu_state(35),0,'locked SONG cannot change pattern or length');
+tap(rec,6);turn(rec,3,63);turn(rec,4,1);turn(rec,5,2);turn(rec,2,1);
+tap(rec,8);for(let i=0;i<5;i++)tap(rec,7);assert.equal(rec.e.emu_state(2),9);turn(rec,3,4);tap(rec,5);assert.equal(rec.e.emu_state(31),1);
+tap(rec,9);tap(rec,9);
+const image=new Uint8Array(rec.e.memory.buffer,rec.e.emu_flash_ptr(),rec.e.emu_flash_size()).slice(),record=latestRecord(image);
+assert.equal(byteHash(record),native.recordHash,'MIDI record, song arrangement and channel/clock settings serialize identically to native');
+const stepOffset=FORMAT.stepOffset+(63*4*16)*8;
+assert.equal(record[stepOffset],67);assert.equal(record[stepOffset+3],101);assert(record[stepOffset+3*16*8+6]&1,'channel 10 kick records drum lane 1');
+const restored=boot(image);assert.equal(restored.e.emu_state(35),2);assert.equal(restored.e.emu_state(37),5);assert.equal(restored.e.emu_state(31),1);
+input(restored,[0xb5,74,42],[0xb1,74,1]);blocks(restored);assert.equal(restored.e.emu_parameter(1,4),42,'restored track channel routes CC and ignores its old channel');
+const externalStart=outputPackets.length;input(restored,[0xfa]);blocks(restored);assert(outputPackets.slice(externalStart).some(v=>(v&0xffff)===0x4390),'external Start emits the sequenced note without echoing transport');assert(!outputPackets.slice(externalStart).some(v=>(v&255)===0xfa));assert.equal(restored.e.emu_state(9),63);assert.equal(restored.e.emu_state(33),0);
+function ticks(p,n){for(let i=0;i<n;i+=48){input(p,...Array.from({length:Math.min(48,n-i)},()=>[0xf8]));blocks(p);}}
+ticks(restored,96);assert.equal(restored.e.emu_state(34),1);assert.equal(restored.e.emu_state(9),63);
+ticks(restored,96);assert.equal(restored.e.emu_state(33),1);assert.equal(restored.e.emu_state(9),0);
+ticks(restored,96);assert.equal(restored.e.emu_state(4),0,'song stops after final repeat');
+tap(restored,11);tap(restored,11);tap(restored,5);input(restored,[0xfa]);blocks(restored);ticks(restored,288);assert.equal(restored.e.emu_state(4),1);assert.equal(restored.e.emu_state(33),0);assert.equal(restored.e.emu_state(9),63,'loop returns to first entry');
+input(restored,[0xfc]);blocks(restored);assert.equal(restored.e.emu_state(4),0);input(restored,[0xfb]);blocks(restored);assert.equal(restored.e.emu_state(4),1);
+send(restored,{t:'midi-reset',epoch:2});assert.equal(restored.e.emu_state(4),0,'external clock disconnect stops playback');
+const bound=boot();input(bound,[0x90,60,100]);input(bound,[0x90,61,100]);assert.equal(bound.midiBatch,null);assert(posted.some(([owner,m])=>owner===bound&&m.t==='midi-overflow'));
+input(bound,...Array.from({length:65},()=>[0xf8]));assert.equal(bound.midiBatch,null,'oversized batch rejected');
+send(bound,{t:'input',notes:1<<7,buttons:0});blocks(bound,1,false);const outputBefore=outCount;
+for(let i=0;i<300;i++){send(bound,{t:'input',notes:0,buttons:0});send(bound,{t:'input',notes:1<<7,buttons:0});}
+assert(bound.e.emu_state(30)>0,'stalled consumer triggers bounded core output recovery');
+blocks(bound,512,false);assert.equal(outCount,outputBefore,'unacknowledged output never posts unbounded batches');send(bound,{t:'midi-output-ack'});const recoveryStart=outputPackets.length;blocks(bound);
+assert.equal(outputPackets.slice(recoveryStart).filter(v=>(v&0xfff0)===0x7bb0).length,16,'overflow recovery sends all-notes-off on all 16 channels');
+for(const cleanup of ['steal','program','all-off','all-sound-off','note-off','reset']){
+ const local=boot();const start=outputPackets.length;
+ send(local,{t:'input',notes:1,buttons:0});blocks(local);
+ assert(outputPackets.slice(start).some(v=>(v&0xffff)===0x3590),'local note 53 is sent externally');
+ const afterOn=outputPackets.length;
+ if(cleanup==='reset')send(local,{t:'midi-reset',epoch:2});
+ else input(local,cleanup==='steal'?[0x90,54,100]:cleanup==='program'?[0xc0,60]:cleanup==='note-off'?[0x80,53,0]:[0xb0,cleanup==='all-sound-off'?120:123,0]);
+ blocks(local);
+ const cleanupMessages=outputPackets.slice(afterOn);
+ assert(cleanupMessages.some(v=>(v&0xffff)===0x3580||(v&0xffff)===0x7bb0),cleanup+' releases the previously emitted local note');
+ assert(!cleanupMessages.some(v=>(v&0xf0)===0x90),'external note is not echoed during cleanup');
+}
+console.log(JSON.stringify({scenario:'real AudioWorklet MIDI input/output, native PCM/packet/save parity, external note+drum REC, song repeat/advance/stop/loop, MIDI clock/continue/reset queue bounds and previously emitted note cleanup',...audioResult,recordHash:byteHash(record),pass:true}));

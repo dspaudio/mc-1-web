@@ -1,8 +1,29 @@
-# MC-1 web emulator 0.2.0
+# MC-1 web emulator 0.3.0
 
 An FM-1 faceplate emulator running the original MC-1 C DSP, sequencer, UI and A/B project storage in an AudioWorklet. Adapted from [dspaudio/orbit-web-emu](https://github.com/dspaudio/orbit-web-emu).
 
 Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector. Browser flash uses its own `mc1-emu-v1` IndexedDB database.
+
+## Added and changed in 0.3.0
+
+- SONG mode arranges the 64 patterns with per-entry repeat counts and optional looping.
+- MIDI ports opens an explicit Connect MIDI permission request. Select an input
+  and output independently; Disconnect MIDI releases notes and closes both ports.
+- Incoming notes, sustain, CC, program changes and pitch bend reach the same C
+  engine as the panel. REC with PLAY records incoming notes. Track channels and
+  clock source are configured on the shared GLO MIDI page; browser input is USB.
+- Sequencer and panel notes, controller changes and transport/clock can be sent
+  to the selected output. Incoming messages are not echoed back.
+- Input and output batches are acknowledged and bounded. Input overflow and
+  unplugging release held notes; output overflow uses the core's all-notes-off recovery.
+- Web MIDI needs a supporting browser, a secure origin and permission. It uses
+  MIDI ports already exposed by the OS, including paired BLE MIDI ports when
+  available. It does not scan or connect directly to Bluetooth devices.
+- Browser audio remains stereo output through the OS audio device selected by
+  the browser/system. This web emulator does not emulate a USB Audio device.
+- Format v6 saves song and MIDI settings in the existing two 36 KiB banks.
+
+See the [Web MIDI specification](https://www.w3.org/TR/webmidi/) for the browser API.
 
 ## Added and changed in 0.2.0
 
@@ -55,6 +76,18 @@ Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector.
 - PRESETS now chooses melodic sounds or drum kits; ALGORITHM chooses patterns
   on every part.
 
+## Song and MIDI
+
+SEQ toggles SONG mode and stops transport. Press EDIT to unlock changes. The
+four knobs set POS (1–128), PATTERN (1–64), REPEAT (1–16), LENGTH (0–128).
+LFO toggles LOOP. LENGTH zero is an empty song and cannot play. Each entry runs
+its pattern for the chosen number of bars; the final entry stops or loops.
+
+From HOME, GLO five times opens MIDI I/O. Four knobs set track channels 1–16;
+LFO cycles INTERNAL / USB / TRS clock. Select USB for external browser clock.
+The firmware's BLE backend is unavailable; Web MIDI can use BLE MIDI ports only
+when the operating system already exposes them.
+
 ## Controls
 
 Press POWER ON, then PLAY. For NEON SPIRAL: stop, GLO three times, KNOB4 clockwise, PLAY. SELECT chooses a part; PRESETS chooses a melodic preset or, with DRUMS selected, a drum kit. ALGORITHM queues patterns on every part. SAVE twice while stopped stores the project locally; reload restores it, including the selected kit and effects.
@@ -92,7 +125,7 @@ LATCH releases the current held notes; press keys again to play. With PLAY and
 REC enabled, the generated notes are recorded into the pattern, including tied
 steps for longer gates. The arpeggiator is available on the three melodic parts.
 
-GLO cycles through GLOBAL MIXER, GROOVE CONTROL, DEMO LIBRARY and KNOB AUTOMATION. In the mixer,
+GLO cycles through GLOBAL MIXER, GROOVE CONTROL, DEMO LIBRARY, KNOB AUTOMATION and MIDI I/O. In the mixer,
 the four knobs adjust PART 1, PART 2, PART 3 and DRUM levels independently.
 SELECT chooses a part and ARP mutes it; the mixer displays level and mute state.
 The mixer reminder reads `SELECT-ARP to mute`.
@@ -119,7 +152,7 @@ OCT− / OCT+ transpose the melodic keyboard by one octave, up to three octaves
 in either direction. The corresponding button lights below or above the default
 octave. During playback, the sixteen white keys show the sixteen sequencer steps.
 
-Build with clang/LLD (wasm32), Python 3 and Node: `python3 tools/check_core.py && python3 tools/build.py`. Serve `build/` over HTTPS or localhost. The workflow performs native/WASM audio parity and AudioWorklet input/storage checks, then deploys GitHub Pages. Build provenance lives in CORE.json and generated build-info.json.
+Build with clang/LLD (wasm32), Python 3 and Node: `python3 tools/check_core.py && python3 tools/build.py`. Serve `build/` over HTTPS or localhost. The workflow performs native/WASM audio parity and AudioWorklet input/storage checks, MIDI port lifecycle tests and actual-worklet song/MIDI parity, then deploys GitHub Pages. `tests/native_midi.c` produces `build/midi-native.json` for `node tests/midi-worklet.mjs`; `node tests/midi.mjs` runs permission, hotplug, disconnect and queue scenarios without a browser. Build provenance lives in CORE.json and generated build-info.json.
 
 POWER ON stays available if audio startup fails, displays the failure, and allows
 a retry. Startup must receive the AudioWorklet ready response within ten seconds.
@@ -131,10 +164,10 @@ before and after saving and reloading.
 Timestamped control tests also check acceleration, popup selection and the
 500 ms deadline through both the C UI and real AudioWorklet message handling.
 Performance tests cover effect types and filters, ARP recording, automation
-capacity/replay/clearing, preset-name preservation and v5 save/load.
+capacity/replay/clearing, preset-name preservation and v6 save/load.
 These checks do not establish browser rendering or physical-device behavior.
 
-Browser behavior is not FM-1 hardware verification. CPU timing, physical I/O, bootloader, calibration, USB/MIDI and real flash are not emulated. Hardware installation remains unverified. Browser saved data may be cleared by browser settings.
+Browser behavior is not FM-1 hardware verification. CPU timing, physical I/O, bootloader, calibration, physical USB/TRS/BLE transports and real flash are not emulated. Web MIDI routes OS ports to the C MIDI engine; it does not validate FM-1 hardware MIDI or USB Audio. Hardware installation remains unverified. Browser saved data may be cleared by browser settings.
 
 Software: GPL-3.0-only; see [NOTICE.md](NOTICE.md). Recorded instrument samples:
 CC0-1.0, credited below. Not affiliated with Roland or M-VAVE.

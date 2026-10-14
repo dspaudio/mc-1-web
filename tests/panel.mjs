@@ -93,7 +93,7 @@ const octaveNotes = [];
 for (let part = 0; part < 3; part++) {
     const e = boot();
     e.emu_enc(0, part);
-    tap(e, 'SEQ');
+    tap(e, 'EDIT');
     key(e, 7);
     tap(e, 'OCT+'); key(e, 7);
     tap(e, 'OCT-'); key(e, 7);
@@ -106,8 +106,8 @@ for (let part = 0; part < 3; part++) {
     tap(e, 'SAVE'); tap(e, 'SAVE');
     assert(e.emu_flash_gen() > 0, 'panel notes must be saved successfully');
     const saved = new Uint8Array(e.memory.buffer, e.emu_flash_ptr(), e.emu_flash_size());
-    assert.equal(saved[4], 5, 'the saved project uses format version 5');
-    // Format v5 keeps the 20-byte header, 72-byte settings and 8-byte steps.
+    assert.equal(saved[4], 6, 'the saved project uses format version 6');
+    // Format v6 keeps the 20-byte header, 72-byte settings and 8-byte steps.
     const notes = Array.from({ length: 7 }, (_, step) => saved[20 + 72 + part * 16 * 8 + step * 8]);
     assert.deepEqual(notes, [60, 72, 60, 48, 24, 96, 108], `OCT buttons transpose part ${part + 1} and clamp at +/-3`);
     octaveNotes.push(notes);
@@ -211,6 +211,7 @@ assert.deepEqual(Array.from(latestRecord(restoredFlash).slice(60, 64)), [0, 127,
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 2);
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 4);
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 7);
+tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 9);
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 5);
 console.log(JSON.stringify({ scenario: 'global mixer knobs, saved levels and GLO page cycle', pass: true }));
 
@@ -266,8 +267,8 @@ trackFx[0][0]++;
 assert.equal(fx.emu_state(10), 11, 'HOME then FX returns to selected-track scope');
 assert.equal(fx.emu_state(5), 19);
 const fxFlash = saveFlash(fx);
-assert.equal(fxFlash[4], 5);
-assert.equal(fxFlash[6] + fxFlash[7] * 256, FORMAT.bodyBytes, 'v5 includes 64 patterns and automation');
+assert.equal(fxFlash[4], 6);
+assert.equal(fxFlash[6] + fxFlash[7] * 256, FORMAT.bodyBytes, 'v6 includes 64 patterns and automation');
 assert.deepEqual(Array.from(fxFlash.slice(FORMAT.trackFxOffset, FORMAT.trackFxOffset + 16)), trackFx.flat(), 'all 16 track-FX parameters are serialized');
 const restoredFx = boot(fxFlash);
 assert.equal(restoredFx.emu_state(5), 19, 'master FX survives reboot');
@@ -275,7 +276,7 @@ for (let part = 0; part < 4; part++) {
     assert.deepEqual(Array.from({ length: 4 }, (_, knob) => restoredFx.emu_state(knob + 10)), trackFx[part], `part ${part + 1} FX survives reboot`);
     restoredFx.emu_enc(0, 1);
 }
-console.log(JSON.stringify({ scenario: 'selected-track FX independence, master toggle, HOME reset and v5 save/reboot', trackFx, pass: true }));
+console.log(JSON.stringify({ scenario: 'selected-track FX independence, master toggle, HOME reset and v6 save/reboot', trackFx, pass: true }));
 
 // Captured from the original v2 WASM writer: factory project, BPM 137 and delay 37.
 const legacyV2 = inflateSync(Buffer.from('eJzNkUFKw1AQhv8ExVKELlyIOzcuaimEQnlWguYRLaFJSFoalGzcvI07waUn8EaewQt4BW+hqZ1q/CMEfJvOZpiZ75/Nl4bT1EXUcQA8vRwMXt/fPp7RxWr2SkcNu8oA7pHqlfmdQQHXuTcdx/RKGBMbE5zeBobqBOsaAo/a+eqFxq8OzXcXmDQ5q/zEDxKD/5dt/hrIVW1OAFOf50Cp/uAT2UfEJ8TP6f9S+Oxn/zDC7qoXo/Vc9Z36XN33Wu5t+UO673/PffHTFx+1Ds33yt+4yVnlx2e+lT/bvCY/7DMlnxs+kv0V8RHxKf3PhY+3xL8nfjzxUevQfK/8+U3OKu9fhlb+bPMR+cnI55J8bvhM9jHxGfFL+n8j/GJL/A/Ez0B81Do03yt/qslZ5dX5hZU/23xIfmYtPjf8TPZT4mfEZ/R/IXy6Ff6P8QkT/pff', 'base64'));

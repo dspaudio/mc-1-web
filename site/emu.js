@@ -14,7 +14,7 @@ const DEV = { w: 963, h: 588 };
  * Same hardware, same faceplate; only the wasm differs. The choice is kept
  * in localStorage and each firmware has its own flash image in IndexedDB. */
 const FW = 'mc1';
-document.getElementById('title').textContent = 'MC-1 0.2.0 · FM-1 emulator';
+document.getElementById('title').textContent = 'MC-1 0.3.0 · FM-1 emulator';
 /* ---- panel mapping (firmware/src/panel.c PANEL_DEFAULT) ----
  * label order: FX SCL ENV LFO EDIT GLO HOME SAVE ARP SEQ PLAY REC OCT- OCT+ */
 const BTN = { 'OCT-': 0, 'OCT+': 1, FX: 2, SCL: 3, ENV: 4, LFO: 5, EDIT: 6, GLO: 7,
@@ -65,6 +65,9 @@ const WHITE_IDS = [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26];
 const BLACK_IDS = [1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25];
 
 let node = null, ctx = null;
+const midi = new McMidiConnection({getNode: () => node, navigator,
+    input:document.getElementById('midi-input'), output:document.getElementById('midi-output'),
+    button:document.getElementById('midi-connect'), status:document.getElementById('midi-status')});
 let notesMask = 0, buttonsMask = 0;
 let masterVal = 1023;
 const encVis = {};                       // enc index -> visual-only cap rotate
@@ -216,6 +219,7 @@ KEYENC['\\'] = [6, 1];
 
 const heldKeys = new Set();
 window.addEventListener('keydown', ev => {
+    if (ev.target?.closest?.('input, select, button, textarea, summary')) return;
     if (ev.repeat) { if (ev.key in KEYENC && KEYENC[ev.key]) { enc(...KEYENC[ev.key]); } ev.preventDefault(); return; }
     const k = ev.key.toLowerCase();
     if (k in KEYNOTES) { heldKeys.add(k); noteDown(KEYNOTES[k]); ev.preventDefault(); }
@@ -309,9 +313,9 @@ async function powerOn() {
     try {
     ctx = new AudioContext({ sampleRate: 44100, latencyHint: 'interactive' });
     if(ctx.sampleRate !== 44100) throw new Error('44.1 kHz audio context required');
-    await ctx.audioWorklet.addModule('worklet.js?v=0.2.0');
+    await ctx.audioWorklet.addModule('worklet.js?v=0.3.0');
     const [wasmBytes, flashImage] = await Promise.all([
-        fetch(FW + '.wasm?v=0.2.0').then(response => {
+        fetch(FW + '.wasm?v=0.3.0').then(response => {
             if (!response.ok) throw new Error('Firmware download failed (HTTP ' + response.status + ')');
             return response.arrayBuffer();
         }),
@@ -328,11 +332,13 @@ async function powerOn() {
         rejectReady = reject;
     });
     node.onprocessorerror = () => {
+        midi.disconnect();
         status.textContent = 'Audio engine error; reload to retry';
         rejectReady(new Error('Audio processor failed'));
     };
     node.port.onmessage = ev => {
         const m = ev.data;
+        midi.message(m);
         if(m.t==='error') { status.textContent = m.message; rejectReady(new Error(m.message)); }
         if(m.t==='ready') resolveReady();
         if(m.t==='storage-reset') storageNotice = m.message;
@@ -348,7 +354,7 @@ async function powerOn() {
         }),
     ]);
     sendMaster();
-    status.textContent = 'MC-1 0.2.0 · 64 patterns · 128 presets · audio ready' + (storageNotice ? ' · ' + storageNotice : '');
+    status.textContent = 'MC-1 0.3.0 · 64 patterns · 128 presets · audio ready' + (storageNotice ? ' · ' + storageNotice : '');
     power.remove();
     node.port.postMessage({ t: 'start' });
     } catch(e) {

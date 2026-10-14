@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>MC-1 0.2.0 — FM-1 emulator</title>
+<title>MC-1 0.3.0 — FM-1 emulator</title>
 <meta name="theme-color" content="#101114">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -284,22 +284,37 @@ body.compact #manual { display: none; }
 #manual tr:last-child td { border-bottom: none; }
 #manual td:first-child { white-space: nowrap; }
 #status {position:fixed;bottom:5px;left:50%;transform:translateX(-50%);z-index:25;font-size:11px;color:#ddd;background:#151515cc;padding:4px 9px;white-space:nowrap;}
+#midi {max-width:900px; margin:18px auto; display:flex; flex-wrap:wrap; gap:12px; align-items:center; color:#ddd;}
+#midi button, #midi select {font:inherit; color:#eee; background:#25282e; border:1px solid #747b86; border-radius:5px; padding:8px; max-width:240px;}
+#midi :focus-visible {outline:2px solid var(--accent); outline-offset:3px;}
+#midi-status {flex-basis:100%; font-size:13px;}
+body.compact #midi {position:fixed; top:8px; left:8px; z-index:30; margin:0; padding:8px; background:#171a1ef2; max-width:calc(100vw - 70px);}
+body.compact #midi:not([open]) {padding:6px;}
+#midi summary {cursor:pointer; color:var(--accent);}
+#midi .ports {display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; align-items:center;}
 </style>
 </head>
 <body>
-<h1 id="title">MC-1 0.2.0 · FM-1 emulator</h1>
+<h1 id="title">MC-1 0.3.0 · FM-1 emulator</h1>
 <button id="fs" aria-label="Toggle fullscreen">⛶</button>
 <div id="fstip"><div class="card"><h2>FULLSCREEN</h2><p>Use Share → Add to Home Screen on iPhone.</p><span class="ok">GOT IT</span></div></div>
-<div id="device"><div id="power"><div class="ring">⏻</div><span>POWER ON</span><small>MC-1 0.2.0 · 64 patterns · actual C engine and screen · sound on</small></div></div>
+<div id="device"><div id="power"><div class="ring">⏻</div><span>POWER ON</span><small>MC-1 0.3.0 · 64 patterns · actual C engine and screen · sound on</small></div></div>
 <div id="help"><b>MC-1 ONLY</b> · Drag or scroll knobs · Space: PLAY · R: REC · 1–0: panel buttons · Z/X: octave · Arrow keys: part/preset<br>
 
 <a href="https://github.com/dspaudio/mc-1-web">Emulator source</a> · <a href="https://github.com/dspaudio/mc-1">Firmware and complete preset list</a></div>
-<span id="status">MC-1 0.2.0 · POWER ON to start</span>
+<details id="midi"><summary>MIDI ports</summary><div class="ports">
+<button id="midi-connect" type="button">Connect MIDI</button>
+<label>Input <select id="midi-input" disabled><option value="">None</option></select></label>
+<label>Output <select id="midi-output" disabled><option value="">None</option></select></label>
+<p id="midi-status" role="status" aria-live="polite">Connect OS MIDI ports. POWER ON for audio.</p></div></details>
+<span id="status">MC-1 0.3.0 · POWER ON to start</span>
 <section id="manual"><h2>PLAY MC-1</h2><div class="cards">
 <div class="card"><h3>NEON SPIRAL / EFFECTS</h3><p>While stopped: press GLO three times, turn KNOB4 clockwise to load NEON SPIRAL, then PLAY. Loading replaces the working project. HOME then FX opens track effects; press FX again for master. ENV cycles AMOUNT / TYPE / FILTER: four delays, four reverbs, soft/hard/fold/fuzz drive, chorus/phaser/flanger, and HPF (low-cut) / LPF (high-cut).</p></div>
-<div class="card"><h3>PARTS AND SOUNDS</h3><p>SELECT chooses three melodic parts or drums. PRESETS opens a 128-preset or eight-kit list that closes after 0.5 seconds without input. Turn slowly for fine changes and quickly for larger jumps. ALGORITHM queues any of 64 patterns, each with 16 steps and four parts. Modified sounds retain their preset name with *. GLO cycles MIXER / GROOVE / DEMO / AUTOMATION. In MIXER: SELECT-ARP to mute. Orange marks selection; bright green marks playback and active states.</p></div>
+<div class="card"><h3>PARTS AND SOUNDS</h3><p>SELECT chooses three melodic parts or drums. PRESETS opens a 128-preset or eight-kit list that closes after 0.5 seconds without input. Turn slowly for fine changes and quickly for larger jumps. ALGORITHM queues any of 64 patterns, each with 16 steps and four parts. Modified sounds retain their preset name with *. GLO cycles MIXER / GROOVE / DEMO / AUTOMATION / MIDI. In MIXER: SELECT-ARP to mute. Orange marks selection; bright green marks playback and active states.</p></div>
 <div class="card"><h3>ARP / RECORDING</h3><p>ARP opens the melodic arpeggiator: MODE / RATE / OCT / GATE; LFO toggles latch. Choose UP, DOWN, UPDOWN, ORDER, RANDOM or CHORD. REC with PLAY records generated notes and sound, mixer and effect knob changes on the 16-step grid. GLO → GROOVE → KNOB4 toggles METRO: clicks only with PLAY and REC, even when all tracks are muted. GLO's AUTOMATION page shows event capacity; EDIT clears the current pattern's automation.</p></div>
 <div class="card"><h3>STEP EDIT / DRUMS</h3><p>EDIT toggles note entry; keys enter a note at the selected step. Drum knobs select SOUND / STEP / HIT / LEVEL. ENV adjusts melodic ADSR. REC records live notes quantized to the current step.</p></div>
-<div class="card"><h3>SAVE AND LIMITS</h3><p>SAVE twice while stopped writes the actual C A/B project format to emulated flash, persisted in IndexedDB. Reload restores it. Browser storage can be cleared by your browser. This is a behavioral FM-1 emulator, not a pi32v2 CPU or timing simulator. No USB, MIDI, calibration, firmware flashing or hardware guarantees.</p></div></div>
+<div class="card"><h3>SONG / MIDI</h3><p>SEQ toggles SONG mode. Press EDIT to unlock the arrangement; four knobs set POS / PATTERN / REPEAT / LENGTH. LFO toggles LOOP. An empty song needs LENGTH before PLAY. GLO five times opens MIDI: the four knobs set track channels; LFO cycles INTERNAL / USB / TRS clock. Browser MIDI input uses USB. Open MIDI ports above to connect an OS input/output; REC with PLAY captures incoming notes. Incoming messages are not echoed.</p></div>
+<div class="card"><h3>SAVE AND LIMITS</h3><p>SAVE twice while stopped writes the actual C A/B project format to emulated flash, persisted in IndexedDB. Reload restores it. Browser storage can be cleared by your browser. This is a behavioral FM-1 emulator, not a pi32v2 CPU or timing simulator. Web MIDI uses OS-exposed ports with your permission. Audio uses the browser’s stereo output. No direct USB audio device emulation, direct BLE connection, calibration, firmware flashing or hardware timing guarantees.</p></div></div>
 <p class="src">FM-1 faceplate, input and AudioWorklet infrastructure adapted from <a href="https://github.com/dspaudio/orbit-web-emu">ORBIT web emulator</a>, originally <a href="https://github.com/sabliran/sloop-web-emu">SLOOP web emulator</a>. Code: GPL-3.0-only. Recorded instruments: <a href="https://github.com/sgossner/VSCO-2-CE">VSCO 2 Community Edition</a>, <a href="samples-LICENSE.txt">CC0-1.0</a> (<a href="recorded-samples.json">sample sources</a>). Only MC-1 firmware is included; no Roland ROMs or samples. Not affiliated with Roland or M-VAVE.</p></section>
-<script src="emu.js?v=0.2.0"></script></body></html>
+<script src="midi.js?v=0.3.0"></script>
+<script src="emu.js?v=0.3.0"></script></body></html>

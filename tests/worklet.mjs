@@ -96,7 +96,7 @@ assert.equal(metroAudio(metroOff).energy,0,'metronome defaults OFF even with REC
 const metroSetting=metroBoot();metroTap(metroSetting,7);metroTap(metroSetting,7);
 assert.equal(metroSetting.e.emu_state(2),2);metroTurn(metroSetting,5,1);metroTap(metroSetting,9);metroTap(metroSetting,9);
 const metroImage=new Uint8Array(metroSetting.e.memory.buffer,metroSetting.e.emu_flash_ptr(),metroSetting.e.emu_flash_size()).slice();
-assert.equal(latestRecord(metroImage)[FORMAT.automationCountOffset-1],1,'GLO GROOVE fourth knob saves METRO ON in v5');
+assert.equal(latestRecord(metroImage)[FORMAT.automationCountOffset-1],1,'GLO GROOVE fourth knob saves METRO ON in v6');
 const stoppedMetro=metroBoot(metroImage);metroTap(stoppedMetro,13);
 assert.equal(metroAudio(stoppedMetro).energy,0,'REC while stopped has no click');
 const playMetro=metroBoot(metroImage);metroTap(playMetro,12);

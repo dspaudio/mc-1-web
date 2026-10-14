@@ -70,6 +70,9 @@ API("emu_led_dim_ptr") uintptr_t emu_led_dim_ptr(void){return (uintptr_t)dims;}
 API("emu_flash_ptr") uintptr_t emu_flash_ptr(void){return (uintptr_t)flash;}
 API("emu_flash_size") unsigned emu_flash_size(void){return sizeof flash;}
 API("emu_flash_gen") uint32_t emu_flash_gen(void){return flash_gen;}
+API("emu_midi_byte") void emu_midi_byte(unsigned source,unsigned byte){if(byte<256)mc_midi_byte(&engine,source,(uint8_t)byte);}
+API("emu_midi_reset") void emu_midi_reset(unsigned source){mc_midi_reset(&engine,source);}
+API("emu_midi_pop") uint32_t emu_midi_pop(void){McMidiMessage m;if(!mc_midi_pop(&engine,&m))return 0;return ((uint32_t)m.length<<24)|m.data[0]|((uint32_t)m.data[1]<<8)|((uint32_t)m.data[2]<<16);}
 /* Read-only test diagnostics, also useful for browser bug reports. */
 API("emu_state") uint32_t emu_state(unsigned k){
  unsigned p=engine.selected<3?engine.selected:0;
@@ -78,7 +81,7 @@ API("emu_state") uint32_t emu_state(unsigned k){
  case 17:return engine.project.arp[p].mode;case 18:return engine.project.arp[p].rate;
  case 19:return engine.project.arp[p].octaves;case 20:return engine.project.arp[p].gate;
  case 21:return engine.project.arp[p].latch;case 22:return engine.project.automation_count;
- case 23:return engine.automation_full;case 24:return engine.step;case 25:return engine.project.preset[p];case 26:return engine.queued;case 27:return MC_PATTERNS;case 28:return engine.edit_step;case 29:return engine.master;default:return 0;}
+ case 23:return engine.automation_full;case 24:return engine.step;case 25:return engine.project.preset[p];case 26:return engine.queued;case 27:return MC_PATTERNS;case 28:return engine.edit_step;case 29:return engine.master;case 30:return engine.midi.dropped;case 31:return engine.project.clock_source;case 32:return engine.project.song_mode;case 33:return engine.song_position;case 34:return engine.song_repeat;case 35:return engine.project.song_length;case 36:case 37:case 38:case 39:return engine.project.midi_channel[k-36];default:return 0;}
 }
 API("emu_parameter") int emu_parameter(unsigned part,unsigned parameter){return mc_parameter_get(&engine,part,parameter);}
 

@@ -14,7 +14,7 @@ async function run(mode) {
         remove() { this.removed = true; } };
     let closed = false, disconnected = false;
     const sandbox = {
-        ctx: null, node: null, FW: 'mc1', console,
+        ctx: null, node: null, FW: 'mc1', console, midi:{message(){},disconnect(){}},
         document: { getElementById: id => id === 'power' ? power : status },
         loadFlash: async () => null, saveFlash() {}, drawFB() {}, applyLeds() {}, sendMaster() {},
         fetch: async () => ({ ok: mode !== 'http', status: 404, arrayBuffer: async () => new ArrayBuffer(8) }),

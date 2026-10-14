@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 export const FORMAT = {
     patterns: 64, stepOffset: 92, trackFxOffset: 32860, presetOffset: 32876,
-    automationCountOffset: 32928, eventsOffset: 32930, bodyBytes: 34830, recordBytes: 34850,
+    automationCountOffset: 32928, eventsOffset: 32930, bodyBytes: 35094, recordBytes: 35114,
 };
 export function latestRecord(image) {
     const view = new DataView(image.buffer, image.byteOffset, image.byteLength);
@@ -13,7 +13,7 @@ export function latestRecord(image) {
     assert(validA || validB, 'at least one A/B record has committed');
     const offset = validB && (!validA || (view.getUint32(slot + 8, true) - view.getUint32(8, true) | 0) > 0) ? slot : 0;
     const record = image.slice(offset, offset + FORMAT.recordBytes);
-    assert.equal(record[4], 5);
+    assert.equal(record[4], 6);
     assert.equal(record[6] + record[7] * 256, FORMAT.bodyBytes);
     return record;
 }

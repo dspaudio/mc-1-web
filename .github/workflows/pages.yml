@@ -16,11 +16,15 @@ jobs:
           cat build/verification.json
           node tests/worklet.mjs
           node tests/startup.mjs
+          node tests/midi.mjs
+          cc -O2 -std=c11 -Wall -Wextra -Werror -Icore/src core/src/*.c tests/native_midi.c -o /tmp/mc1-midi-native
+          /tmp/mc1-midi-native > build/midi-native.json
+          node tests/midi-worklet.mjs
           node tests/panel.mjs
           node tests/controls.mjs
           node tests/performance.mjs
           node tests/patterns.mjs
-          rm build/native.json
+          rm build/native.json build/midi-native.json
       - uses: actions/upload-artifact@v4
         with:
           name: mc-1-web-tested

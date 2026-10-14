@@ -53,7 +53,7 @@ for (let block = 0; block < 256; block++) {
 assert(energy > 0.1); assert.equal(audioHash, native.pattern64Hash);
 assert.equal(restored.emu_parameter(4, 14), 41, 'high-address master automation replays after reload');
 tap(restored, 12); const reserialized = latestRecord(save(restored));
-assert.deepEqual(reserialized.slice(20), record.slice(20), 'all project data survives v5 save, reboot, replay and resave');
+assert.deepEqual(reserialized.slice(20), record.slice(20), 'all project data survives v6 save, reboot, replay and resave');
 
 const queue = boot(image); tap(queue, 12); queue.emu_render(1); queue.emu_enc(1, 63);
 assert.equal(queue.emu_state(9), 0); assert.equal(queue.emu_state(26), 63);
@@ -61,4 +61,4 @@ for (let i = 0; i < 100000 && queue.emu_state(9) !== 63; i++) queue.emu_render(1
 assert.equal(queue.emu_state(9), 63); assert.equal(queue.emu_state(24), 0, 'queued pattern 64 begins at the bar boundary');
 queue.emu_enc(1, 1); assert.equal(queue.emu_state(26), 0, 'queue wraps pattern 64 to pattern 1');
 assert.equal(queue.emu_state(9), 63, 'queued wrap does not cut the playing pattern short');
-console.log(JSON.stringify({ scenario: '64-pattern edit, last-step drums, live REC, queue/wrap, 16-bit automation, v5 A/B save/reload and native/WASM parity', patterns: 64, flashBytes: image.length, audioHash, recordHash: hashBytes(record), pass: true }));
+console.log(JSON.stringify({ scenario: '64-pattern edit, last-step drums, live REC, queue/wrap, 16-bit automation, v6 A/B save/reload and native/WASM parity', patterns: 64, flashBytes: image.length, audioHash, recordHash: hashBytes(record), pass: true }));
