@@ -14,7 +14,7 @@ const DEV = { w: 963, h: 588 };
  * Same hardware, same faceplate; only the wasm differs. The choice is kept
  * in localStorage and each firmware has its own flash image in IndexedDB. */
 const FW = 'mc1';
-document.getElementById('title').textContent = 'MC-1 0.1.4 · FM-1 emulator';
+document.getElementById('title').textContent = 'MC-1 0.2.0 · FM-1 emulator';
 /* ---- panel mapping (firmware/src/panel.c PANEL_DEFAULT) ----
  * label order: FX SCL ENV LFO EDIT GLO HOME SAVE ARP SEQ PLAY REC OCT- OCT+ */
 const BTN = { 'OCT-': 0, 'OCT+': 1, FX: 2, SCL: 3, ENV: 4, LFO: 5, EDIT: 6, GLO: 7,
@@ -66,7 +66,7 @@ const BLACK_IDS = [1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25];
 
 let node = null, ctx = null;
 let notesMask = 0, buttonsMask = 0;
-let masterVal = 820;
+let masterVal = 1023;
 const encVis = {};                       // enc index -> visual-only cap rotate
 let masterVis = null;                    // master cap repaint
 
@@ -303,15 +303,15 @@ async function saveFlash(buf) {
 async function powerOn() {
     const power = document.getElementById('power');
     const status = document.getElementById('status');
-    let readyTimer;
+    let readyTimer, storageNotice = '';
     power.style.pointerEvents = 'none';
     status.textContent = 'Starting audio engine…';
     try {
     ctx = new AudioContext({ sampleRate: 44100, latencyHint: 'interactive' });
     if(ctx.sampleRate !== 44100) throw new Error('44.1 kHz audio context required');
-    await ctx.audioWorklet.addModule('worklet.js?v=0.1.4');
+    await ctx.audioWorklet.addModule('worklet.js?v=0.2.0');
     const [wasmBytes, flashImage] = await Promise.all([
-        fetch(FW + '.wasm?v=0.1.4').then(response => {
+        fetch(FW + '.wasm?v=0.2.0').then(response => {
             if (!response.ok) throw new Error('Firmware download failed (HTTP ' + response.status + ')');
             return response.arrayBuffer();
         }),
@@ -335,6 +335,7 @@ async function powerOn() {
         const m = ev.data;
         if(m.t==='error') { status.textContent = m.message; rejectReady(new Error(m.message)); }
         if(m.t==='ready') resolveReady();
+        if(m.t==='storage-reset') storageNotice = m.message;
         if (m.t === 'frame') { drawFB(m.fb); applyLeds(m.leds, m.dims); }
         else if (m.t === 'leds') applyLeds(m.leds, m.dims);
         else if (m.t === 'flash') saveFlash(m.data);
@@ -347,7 +348,7 @@ async function powerOn() {
         }),
     ]);
     sendMaster();
-    status.textContent = 'MC-1 0.1.4 · 128 presets · recorded PCM · ARP + automation · audio ready';
+    status.textContent = 'MC-1 0.2.0 · 64 patterns · 128 presets · audio ready' + (storageNotice ? ' · ' + storageNotice : '');
     power.remove();
     node.port.postMessage({ t: 'start' });
     } catch(e) {

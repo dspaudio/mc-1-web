@@ -19,6 +19,7 @@ jobs:
           node tests/panel.mjs
           node tests/controls.mjs
           node tests/performance.mjs
+          node tests/patterns.mjs
           rm build/native.json
       - uses: actions/upload-artifact@v4
         with:

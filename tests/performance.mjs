@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { FORMAT, latestRecord, events as recordEvents } from './format.mjs';
 
 const mod = new WebAssembly.Module(fs.readFileSync('build/mc1.wasm'));
 const BTN = { FX: 2, ENV: 4, LFO: 5, EDIT: 6, GLO: 7, HOME: 8, SAVE: 9, ARP: 10, PLAY: 12, REC: 13 };
@@ -18,10 +19,7 @@ function save(e) {
     const generation = e.emu_flash_gen(); tap(e, 'SAVE'); tap(e, 'SAVE');
     assert(e.emu_flash_gen() > generation, 'project saves through the panel');
     const image = new Uint8Array(e.memory.buffer, e.emu_flash_ptr(), e.emu_flash_size()).slice();
-    const view = new DataView(image.buffer);
-    const offset = image[4096] === 77 && view.getUint32(4104, true) > view.getUint32(8, true) ? 4096 : 0;
-    const record = image.slice(offset, offset + 3746);
-    assert.equal(record[4], 4); assert.equal(record[6] + record[7] * 256, 3726);
+    const record = latestRecord(image);
     return { image, record };
 }
 function render(e, frames) {
@@ -81,9 +79,9 @@ for (let scope = 0; scope < 5; scope++) {
 const effectsSave = save(effects);
 const restoredEffects = boot(effectsSave.image);
 for (let scope = 0; scope < 5; scope++) for (let parameter = 14; parameter <= 23; parameter++) {
-    assert.equal(restoredEffects.emu_parameter(scope, parameter), effects.emu_parameter(scope, parameter), 'all FX types, amounts and filters survive v4 reload');
+    assert.equal(restoredEffects.emu_parameter(scope, parameter), effects.emu_parameter(scope, parameter), 'all FX types, amounts and filters survive v5 reload');
 }
-console.log(JSON.stringify({ scenario: 'five independent FX scopes, 4/4/4/3 type choices, HPF/LPF and v4 save/reload', pass: true }));
+console.log(JSON.stringify({ scenario: 'five independent FX scopes, 4/4/4/3 type choices, HPF/LPF and v5 save/reload', pass: true }));
 
 const arpAudio = [];
 for (let mode = 0; mode < 6; mode++) {
@@ -125,7 +123,7 @@ for (let step = 0; step < 16; step++) {
         assert.equal(data[4], 100); assert.equal(data[5], step % 4 ? 4 : 0, 'long gates use tied sixteenth steps');
     } else assert.deepEqual(data, Array(8).fill(0), 'the remainder of a quarter-note gate is silent');
 }
-console.log(JSON.stringify({ scenario: 'six ARP modes, rate/octave/gate settings, latch, melodic-only scope, generated chord REC and v4 settings reload', arpAudio, pass: true }));
+console.log(JSON.stringify({ scenario: 'six ARP modes, rate/octave/gate settings, latch, melodic-only scope, generated chord REC and v5 settings reload', arpAudio, pass: true }));
 
 const automation = boot(); tap(automation, 'REC'); tap(automation, 'PLAY'); automation.emu_render(1);
 for (let step = 0; step < 16; step++) {
@@ -145,8 +143,8 @@ fxPage(automation, 0); automation.emu_enc(2, 1);
 assert.equal(automation.emu_state(22), 384, 'overwriting the same step and parameter does not consume capacity');
 tap(automation, 'PLAY'); tap(automation, 'REC');
 const automationSave = save(automation);
-assert.equal(automationSave.record[2208] + automationSave.record[2209] * 256, 384);
-const events = Array.from({ length: 384 }, (_, i) => Array.from(automationSave.record.slice(2210 + i * 4, 2214 + i * 4)));
+const events = recordEvents(automationSave.record);
+assert.equal(events.length, 384);
 assert.equal(new Set(events.map(event => event.slice(0, 3).join(','))).size, 384);
 assert.deepEqual(events.find(event => event[0] === 0 && event[1] === 15 && event[2] === 14), [0, 15, 14, 17]);
 const replay = boot(automationSave.image); assert.equal(replay.emu_state(22), 384);
@@ -166,17 +164,17 @@ assert.equal(patterns.emu_state(22), 2);
 for (let i = 0; i < 4; i++) tap(patterns, 'GLO'); tap(patterns, 'EDIT');
 assert.equal(patterns.emu_state(22), 1, 'clearing one pattern preserves automation in another pattern');
 const remaining = save(patterns).record;
-assert.equal(remaining[2210], 0); assert.equal(remaining[2212], 4, 'the retained event is the first pattern sound cutoff');
-console.log(JSON.stringify({ scenario: '384 step-quantized automation events, track/master/mix capture, overwrite/full, replay, pattern-only clear and v4 reload', pass: true }));
+assert.equal(recordEvents(remaining)[0][0], 0); assert.equal(recordEvents(remaining)[0][2], 4, 'the retained event is the first pattern sound cutoff');
+console.log(JSON.stringify({ scenario: '384 step-quantized automation events, track/master/mix capture, overwrite/full, replay, pattern-only clear and v5 reload', pass: true }));
 
 const origin = boot(); const preset = origin.emu_state(25); const original = frame(origin); const initialCutoff = origin.emu_state(7);
 origin.emu_enc(2, 1); const changed = frame(origin);
 assert.equal(origin.emu_state(25), preset, 'editing retains the originating preset ID');
 assert.deepEqual(region(changed, 8, 30, 96, 14), region(original, 8, 30, 96, 14), 'ACID SAW name remains visible after editing');
 assert.notDeepEqual(region(changed, 104, 30, 12, 14), region(original, 104, 30, 12, 14), 'an asterisk marks the changed sound');
-const originSave = save(origin); assert.equal(originSave.record[2156], preset);
+const originSave = save(origin); assert.equal(originSave.record[FORMAT.presetOffset], preset);
 const restoredOrigin = boot(originSave.image); assert.equal(restoredOrigin.emu_state(25), preset);
 assert.deepEqual(region(frame(restoredOrigin), 8, 30, 108, 14), region(changed, 8, 30, 108, 14), 'preset name and asterisk survive save/reload');
 restoredOrigin.emu_enc(2, initialCutoff - restoredOrigin.emu_state(7));
 assert.deepEqual(region(frame(restoredOrigin), 8, 30, 108, 14), region(original, 8, 30, 108, 14), 'returning to original parameters removes the asterisk');
-console.log(JSON.stringify({ scenario: 'originating preset name and changed marker survive editing and v4 reload', pass: true }));
+console.log(JSON.stringify({ scenario: 'originating preset name and changed marker survive editing and v5 reload', pass: true }));

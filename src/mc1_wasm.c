@@ -17,7 +17,7 @@ static McUi ui;
 static uint16_t fb[240*240];
 static int16_t pcm[1024];
 static float audio[1024];
-static uint8_t flash[8192],leds[11],dims[11],held_part[27],held_note[27];
+static uint8_t flash[MC_STORE_END-MC_STORE_A],leds[11],dims[11],held_part[27],held_note[27];
 static uint32_t flash_gen,fb_gen,notes,buttons;
 static int master=1023;
 static const uint8_t step_keys[MC_STEPS]={0,2,4,6,7,9,11,12,14,16,18,19,21,23,24,26};
@@ -28,9 +28,9 @@ static const int8_t matrix[6][11]={
  {23,24,25,26,27,28,29,30,31,32,33},
  {0,1,15,14,17,16,19,18,20,21,22},
  {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}};
-static int bounds(uint32_t off,unsigned n){return off>=MC_STORE_A && off<=MC_STORE_B+4096 && n<=MC_STORE_B+4096-off;}
+static int bounds(uint32_t off,unsigned n){return off>=MC_STORE_A && off<=MC_STORE_END && n<=MC_STORE_END-off;}
 static int rd(uint32_t off,void *out,unsigned n){if(!bounds(off,n))return -1;uint8_t *p=out;for(unsigned i=0;i<n;i++)p[i]=flash[off-MC_STORE_A+i];return 0;}
-static int erase(uint32_t off){if((off!=MC_STORE_A&&off!=MC_STORE_B))return -1;for(unsigned i=0;i<4096;i++)flash[off-MC_STORE_A+i]=255;flash_gen++;return 0;}
+static int erase(uint32_t off){if(off%MC_SECTOR||!bounds(off,MC_SECTOR))return -1;for(unsigned i=0;i<MC_SECTOR;i++)flash[off-MC_STORE_A+i]=255;flash_gen++;return 0;}
 static int prog(uint32_t off,const void *in,unsigned n){if(!bounds(off,n))return -1;const uint8_t *p=in;for(unsigned i=0;i<n;i++)flash[off-MC_STORE_A+i]&=p[i];flash_gen++;return 0;}
 static const McStorage storage={rd,erase,prog};
 static void service(void){
@@ -38,7 +38,7 @@ static void service(void){
  if(ui.save_request){ui.save_request=0;ui.message=mc_store_save(&storage,&engine.project)==0?"SAVED":"SAVE FAILED";}
 }
 API("emu_frame") void emu_frame(void){
- engine.master=(uint16_t)((unsigned)master*(unsigned)master/32);
+ engine.master=(uint32_t)((uint64_t)(unsigned)master*(unsigned)master*MC_MASTER_MAX/(1023u*1023u));
  service();
  for(unsigned y=0;y<240;y+=8)mc_ui_strip(&engine,&ui,y,8,fb+y*240);
  for(unsigned c=0;c<11;c++){leds[c]=dims[c]=0;for(unsigned r=1;r<5;r++){
@@ -78,7 +78,7 @@ API("emu_state") uint32_t emu_state(unsigned k){
  case 17:return engine.project.arp[p].mode;case 18:return engine.project.arp[p].rate;
  case 19:return engine.project.arp[p].octaves;case 20:return engine.project.arp[p].gate;
  case 21:return engine.project.arp[p].latch;case 22:return engine.project.automation_count;
- case 23:return engine.automation_full;case 24:return engine.step;case 25:return engine.project.preset[p];default:return 0;}
+ case 23:return engine.automation_full;case 24:return engine.step;case 25:return engine.project.preset[p];case 26:return engine.queued;case 27:return MC_PATTERNS;case 28:return engine.edit_step;case 29:return engine.master;default:return 0;}
 }
 API("emu_parameter") int emu_parameter(unsigned part,unsigned parameter){return mc_parameter_get(&engine,part,parameter);}
 

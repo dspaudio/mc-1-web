@@ -41,8 +41,11 @@ async function run(mode) {
                 if (mode === 'timeout') return;
                 queueMicrotask(() => {
                     if (mode === 'processor') this.onprocessorerror();
-                    else this.port.onmessage({ data: mode === 'init' ?
+                    else {
+                    if (mode === 'storage-reset') this.port.onmessage({data:{t:'storage-reset',message:'Previous development save is incompatible; started a new 64-pattern project'}});
+                    this.port.onmessage({ data: mode === 'init' ?
                         { t: 'error', message: 'Invalid WASM' } : { t: 'ready' } });
+                    }
                 });
             }
             disconnect() { disconnected = true; }
@@ -51,9 +54,10 @@ async function run(mode) {
     vm.createContext(sandbox);
     vm.runInContext(source.slice(start, end), sandbox);
     await vm.runInContext('powerOn()', sandbox);
-    if (mode === 'ready') {
+    if (mode === 'ready' || mode === 'storage-reset') {
         assert(power.removed);
         assert.match(status.textContent, /audio ready/);
+        if (mode === 'storage-reset') assert.match(status.textContent, /incompatible; started a new 64-pattern project/);
         assert(!closed);
         sandbox.node.onprocessorerror();
         assert.match(status.textContent, /error/i);
@@ -70,5 +74,5 @@ async function run(mode) {
         assert.match(status.textContent, /audio ready/);
     }
 }
-for (const mode of ['init', 'processor', 'timeout', 'module', 'http', 'resume', 'suspended', 'cleanup', 'ready']) await run(mode);
+for (const mode of ['init', 'processor', 'timeout', 'module', 'http', 'resume', 'suspended', 'cleanup', 'ready', 'storage-reset']) await run(mode);
 console.log('PASS startup ready, processor/init/module/HTTP/resume failure, timeout, cleanup and retry state');

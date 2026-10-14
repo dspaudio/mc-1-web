@@ -9,11 +9,10 @@ class SloopProcessor extends AudioWorkletProcessor {
         const mod = options.processorOptions.wasmModule || new WebAssembly.Module(options.processorOptions.wasmBytes);
         this.e = new WebAssembly.Instance(mod, {}).exports;
         const img = options.processorOptions.flashImage;
-        if (img && img.byteLength) {        // restore the saved flash before boot
-            const fl = new Uint8Array(this.e.memory.buffer, this.e.emu_flash_ptr(), this.e.emu_flash_size());
-            fl.set(new Uint8Array(img, 0, Math.min(img.byteLength, fl.length)));
-        }
-        if(!img || !img.byteLength) new Uint8Array(this.e.memory.buffer,this.e.emu_flash_ptr(),this.e.emu_flash_size()).fill(255);
+        const fl = new Uint8Array(this.e.memory.buffer, this.e.emu_flash_ptr(), this.e.emu_flash_size());
+        fl.fill(255);
+        if (img && img.byteLength === fl.length) fl.set(new Uint8Array(img));
+        else if (img && img.byteLength) this.port.postMessage({t:'storage-reset',message:'Previous development save is incompatible; started a new 64-pattern project'});
         this.lastFlashGen = 0;
         this.e.emu_init();
         this.lastFlashGen = this.e.emu_flash_gen();   // boot-time writes need no save

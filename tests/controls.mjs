@@ -46,12 +46,13 @@ console.log(JSON.stringify({ scenario: 'slow/fast controls, BPM, exact threshold
 const choices = boot();
 for (let i = 1; i <= 4; i++) { choices.emu_enc_at(0, 1, 1000 + i); assert.equal(choices.emu_state(1), i % 4); }
 choices.emu_enc_at(0, -1, 1005); assert.equal(choices.emu_state(1), 3);
-for (let i = 1; i <= 4; i++) { choices.emu_enc_at(1, 1, 1010 + i); assert.equal(choices.emu_state(9), i % 4); }
-choices.emu_enc_at(1, -1, 1015); assert.equal(choices.emu_state(9), 3);
+for (let i = 1; i <= 64; i++) { choices.emu_enc_at(1, 1, 1010 + i); assert.equal(choices.emu_state(9), (1 + (i - 1) * 3) % 64); }
+choices.emu_enc(1, -choices.emu_state(9));
+choices.emu_enc_at(1, -1, 1075); assert.equal(choices.emu_state(9), 63);
 for (let i = 1; i <= 8; i++) { choices.emu_enc_at(6, 1, 1020 + i); assert.equal(choices.emu_state(8), i % 8); }
 choices.emu_enc_at(6, -1, 1029); assert.equal(choices.emu_state(8), 7);
 assert.equal(choices.emu_state(14), 1, 'drum kit choices also open the popup');
-console.log(JSON.stringify({ scenario: 'four parts, four patterns and eight drum kits stay one step at fast speed and wrap', pass: true }));
+console.log(JSON.stringify({ scenario: 'four parts and eight kits stay one step; 64 patterns accelerate by three and wrap', pass: true }));
 
 const presets = presetZero();
 presets.emu_enc_at(6, 1, 1000); assert.equal(presets.emu_state(6), 1);
@@ -99,6 +100,14 @@ for (const [name, action] of [
 }
 const volume = boot(); volume.emu_enc_at(6, 1, 1000); volume.emu_adc_set(4, 800);
 assert.equal(volume.emu_state(14), 1, 'master ADC polling does not dismiss the list');
+for (const adc of [-1, 0, 256, 512, 1023, 1200]) {
+    volume.emu_adc_set(4, adc); volume.emu_frame();
+    const bounded = Math.max(0, Math.min(1023, adc));
+    assert.equal(volume.emu_state(29), Math.floor(bounded * bounded * 196608 / (1023 * 1023)), 'master maps the complete ADC range quadratically without overflow');
+}
+volume.emu_adc_set(4, 0); volume.emu_frame(); volume.emu_input(1, 0); volume.emu_render(512);
+assert(new Float32Array(volume.memory.buffer, volume.emu_audio_ptr(), 1024).every(sample => sample === 0), 'zero master produces digital silence');
+assert.match(fs.readFileSync('site/emu.js', 'utf8'), /let masterVal = 1023;/, 'web master starts at the new full-scale setting');
 const release = boot(); release.emu_input(1, 0); release.emu_enc_at(6, 1, 1000);
 release.emu_input(0, 0);
 assert.equal(release.emu_state(14), 0, 'releasing a held key also closes the popup');
@@ -106,6 +115,6 @@ assert.equal(release.emu_state(14), 0, 'releasing a held key also closes the pop
 const saved = presetZero(); tap(saved, 9); tap(saved, 9);
 const before = new Uint8Array(saved.memory.buffer, saved.emu_flash_ptr() + 24, 12).slice();
 saved.emu_enc_at(6, 1, 1000); tap(saved, 9); tap(saved, 9);
-const after = new Uint8Array(saved.memory.buffer, saved.emu_flash_ptr() + 4096 + 24, 12).slice();
+const after = new Uint8Array(saved.memory.buffer, saved.emu_flash_ptr() + saved.emu_flash_size() / 2 + 24, 12).slice();
 assert.notDeepEqual(after, before, 'popup selection changes the saved sound immediately');
 console.log(JSON.stringify({ scenario: '128-preset acceleration and wrap, rendered popup, immediate sound selection, idle expiry/refresh, input dismissal and clock wrap', pass: true }));

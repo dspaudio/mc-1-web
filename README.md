@@ -1,8 +1,22 @@
-# MC-1 web emulator 0.1.4
+# MC-1 web emulator 0.2.0
 
 An FM-1 faceplate emulator running the original MC-1 C DSP, sequencer, UI and A/B project storage in an AudioWorklet. Adapted from [dspaudio/orbit-web-emu](https://github.com/dspaudio/orbit-web-emu).
 
 Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector. Browser flash uses its own `mc1-emu-v1` IndexedDB database.
+
+## Added and changed in 0.2.0
+
+- Every project starts with 64 patterns, each containing 16 steps on four parts.
+- ALGORITHM selects or queues patterns 1–64, wrapping at either end.
+- Recording, step editing and parameter automation work on every pattern.
+- GLO → GROOVE CONTROL → KNOB4 toggles METRO. The metronome clicks only while
+  PLAY and REC are both active, including with all tracks muted. It defaults OFF
+  and saves with the project.
+- Format v5 stores the complete project in two 36 KiB flash banks.
+- The master output has six times the former gain range and starts at full scale.
+  A shared C stereo limiter contains peaks; the browser adds no separate gain.
+- Previous development browser saves are not migrated. A size mismatch starts
+  a fresh project and displays a notice; the old save is not overwritten until SAVE.
 
 ## Added and changed in 0.1.4
 
@@ -51,9 +65,9 @@ highlighted sound immediately; no confirmation is needed. The list closes after
 button or keyboard input closes it immediately.
 
 Repeat a turn in the same direction within 60 ms to move continuous parameters
-and the 128-sound list three times faster; tempo moves six times faster. Slow
+and the 128-sound and 64-pattern lists three times faster; tempo moves six times faster. Slow
 turns, direction changes and switching controls return to one step. Short lists,
-including parts, patterns and drum kits, always move one choice per step.
+including parts and drum kits, always move one choice per step.
 
 HOME then FX opens the selected part's delay, reverb, drive and modulation controls.
 The four knobs edit that part only, including DRUMS. Press FX again to switch
@@ -85,7 +99,7 @@ The mixer reminder reads `SELECT-ARP to mute`.
 
 To record knob automation, enable PLAY and REC, then turn sound, mixer or effect
 controls. Values are quantized to the current sixteenth-note step and replayed
-with that pattern. The 384-event capacity is shared by all four patterns, four
+with that pattern. The 384-event capacity is shared by all 64 patterns, four
 tracks and the master; changing the same parameter at the same step replaces
 its event. KNOB AUTOMATION shows the count and recording state. EDIT on this
 page clears only the current pattern's automation. At capacity, existing events
@@ -117,7 +131,7 @@ before and after saving and reloading.
 Timestamped control tests also check acceleration, popup selection and the
 500 ms deadline through both the C UI and real AudioWorklet message handling.
 Performance tests cover effect types and filters, ARP recording, automation
-capacity/replay/clearing, preset-name preservation and v4 save/load.
+capacity/replay/clearing, preset-name preservation and v5 save/load.
 These checks do not establish browser rendering or physical-device behavior.
 
 Browser behavior is not FM-1 hardware verification. CPU timing, physical I/O, bootloader, calibration, USB/MIDI and real flash are not emulated. Hardware installation remains unverified. Browser saved data may be cleared by browser settings.

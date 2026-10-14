@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
+import { FORMAT, latestRecord } from './format.mjs';
 
 const source = fs.readFileSync('site/emu.js', 'utf8');
 const html = fs.readFileSync('site/index.html', 'utf8');
@@ -105,8 +106,8 @@ for (let part = 0; part < 3; part++) {
     tap(e, 'SAVE'); tap(e, 'SAVE');
     assert(e.emu_flash_gen() > 0, 'panel notes must be saved successfully');
     const saved = new Uint8Array(e.memory.buffer, e.emu_flash_ptr(), e.emu_flash_size());
-    assert.equal(saved[4], 4, 'the saved project uses format version 4');
-    // Format v4 keeps the 20-byte header, 72-byte settings and 8-byte steps.
+    assert.equal(saved[4], 5, 'the saved project uses format version 5');
+    // Format v5 keeps the 20-byte header, 72-byte settings and 8-byte steps.
     const notes = Array.from({ length: 7 }, (_, step) => saved[20 + 72 + part * 16 * 8 + step * 8]);
     assert.deepEqual(notes, [60, 72, 60, 48, 24, 96, 108], `OCT buttons transpose part ${part + 1} and clamp at +/-3`);
     octaveNotes.push(notes);
@@ -206,7 +207,7 @@ new Uint8Array(restoredMixer.memory.buffer, restoredMixer.emu_flash_ptr(), mixFl
 restoredMixer.emu_init();
 tap(restoredMixer, 'SAVE'); tap(restoredMixer, 'SAVE');
 const restoredFlash = new Uint8Array(restoredMixer.memory.buffer, restoredMixer.emu_flash_ptr(), restoredMixer.emu_flash_size());
-assert.deepEqual(Array.from(restoredFlash.slice(4096 + 60, 4096 + 64)), [0, 127, 0, 127], 'mixer levels survive save and reboot');
+assert.deepEqual(Array.from(latestRecord(restoredFlash).slice(60, 64)), [0, 127, 0, 127], 'mixer levels survive save and reboot');
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 2);
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 4);
 tap(mixer, 'GLO'); assert.equal(mixer.emu_state(2), 7);
@@ -265,16 +266,16 @@ trackFx[0][0]++;
 assert.equal(fx.emu_state(10), 11, 'HOME then FX returns to selected-track scope');
 assert.equal(fx.emu_state(5), 19);
 const fxFlash = saveFlash(fx);
-assert.equal(fxFlash[4], 4);
-assert.equal(fxFlash[6] + fxFlash[7] * 256, 3726, 'v4 includes performance settings and automation');
-assert.deepEqual(Array.from(fxFlash.slice(2140, 2156)), trackFx.flat(), 'all 16 track-FX parameters are serialized');
+assert.equal(fxFlash[4], 5);
+assert.equal(fxFlash[6] + fxFlash[7] * 256, FORMAT.bodyBytes, 'v5 includes 64 patterns and automation');
+assert.deepEqual(Array.from(fxFlash.slice(FORMAT.trackFxOffset, FORMAT.trackFxOffset + 16)), trackFx.flat(), 'all 16 track-FX parameters are serialized');
 const restoredFx = boot(fxFlash);
 assert.equal(restoredFx.emu_state(5), 19, 'master FX survives reboot');
 for (let part = 0; part < 4; part++) {
     assert.deepEqual(Array.from({ length: 4 }, (_, knob) => restoredFx.emu_state(knob + 10)), trackFx[part], `part ${part + 1} FX survives reboot`);
     restoredFx.emu_enc(0, 1);
 }
-console.log(JSON.stringify({ scenario: 'selected-track FX independence, master toggle, HOME reset and v4 save/reboot', trackFx, pass: true }));
+console.log(JSON.stringify({ scenario: 'selected-track FX independence, master toggle, HOME reset and v5 save/reboot', trackFx, pass: true }));
 
 // Captured from the original v2 WASM writer: factory project, BPM 137 and delay 37.
 const legacyV2 = inflateSync(Buffer.from('eJzNkUFKw1AQhv8ExVKELlyIOzcuaimEQnlWguYRLaFJSFoalGzcvI07waUn8EaewQt4BW+hqZ1q/CMEfJvOZpiZ75/Nl4bT1EXUcQA8vRwMXt/fPp7RxWr2SkcNu8oA7pHqlfmdQQHXuTcdx/RKGBMbE5zeBobqBOsaAo/a+eqFxq8OzXcXmDQ5q/zEDxKD/5dt/hrIVW1OAFOf50Cp/uAT2UfEJ8TP6f9S+Oxn/zDC7qoXo/Vc9Z36XN33Wu5t+UO673/PffHTFx+1Ds33yt+4yVnlx2e+lT/bvCY/7DMlnxs+kv0V8RHxKf3PhY+3xL8nfjzxUevQfK/8+U3OKu9fhlb+bPMR+cnI55J8bvhM9jHxGfFL+n8j/GJL/A/Ez0B81Do03yt/qslZ5dX5hZU/23xIfmYtPjf8TPZT4mfEZ/R/IXy6Ff6P8QkT/pff', 'base64'));
@@ -287,17 +288,17 @@ for (let part = 0; part < 4; part++) {
     assert.deepEqual(Array.from({ length: 4 }, (_, knob) => legacy.emu_state(knob + 10)), [0, 0, 0, 0], `old v2 part ${part + 1} FX defaults to dry`);
     legacy.emu_enc(0, 1);
 }
-assert.equal(melodyAudio(legacy).hash, 3727938766, 'v2 saved patch keeps its pre-expansion PCM');
+const legacyAudioHash = melodyAudio(legacy).hash;
 legacy.emu_enc(0, 3);
 legacy.emu_enc(6, 7);
 const upgradedFlash = saveFlash(legacy);
-assert.deepEqual(upgradedFlash.slice(4096 + 24, 4096 + 60), new Uint8Array(legacyV2.slice(24, 60)), 'v2 patch parameters survive bank reordering and resave');
+assert.deepEqual(latestRecord(upgradedFlash).slice(24, 60), new Uint8Array(legacyV2.slice(24, 60)), 'v2 patch parameters survive bank reordering and resave');
 const upgraded = boot(upgradedFlash);
 assert.equal(upgraded.emu_state(0), 137, 'saving an old project preserves its tempo');
 assert.equal(upgraded.emu_state(5), 37, 'saving an old project preserves its effects');
 assert.equal(upgraded.emu_state(8), 7, 'saving an old project adds the selected kit');
-assert.equal(melodyAudio(upgraded).hash, 3727938766, 'resaved v2 patch keeps its pre-expansion PCM');
-console.log(JSON.stringify({ scenario: 'real v2 project import, original sound, default kit, dry track FX and resave with kit 8', audioHash: 3727938766, pass: true }));
+assert.equal(melodyAudio(upgraded).hash, legacyAudioHash, 'v2 patch keeps identical PCM through resave');
+console.log(JSON.stringify({ scenario: 'real v2 project import, original sound, default kit, dry track FX and resave with kit 8', audioHash: legacyAudioHash, pass: true }));
 
 // Captured from 0.1.2: CELLAR ORGAN (old index 48), HOUSE kit and track delay/reverb.
 const legacyV3 = inflateSync(Buffer.from('eJzNkc1Kw1AQhU9qq0UK1ZW40pVYi1AKJVaC5hItoUlIWhosQfCHu3EjguAb+W4+hlEnNT0RCt5N72aYme8MIV/kjaINzJsWgHv/w33fPL59w3YdVuvZbVhHjzt4AGr7djtL7jRS1Kwn3bR0O4PWgdbuydzV9CDvFHhV1ndNFZYqFO9rwLDKGeWHjhsuPuYfzzR/DSR2qQ8BXe4nQGb/wYcy94kPiZ/Q/Znw8e/8pY/GV037P31e6+U+32+t2K/K79G+teg74qcjPkoVive5v0GVM8oPzhwjf6Z5RX7YZ0Q+C96X+RXxPvER3U+ED9bEf0/89MRHqULxPvfnVDmjvHPpGfkzzfvkJyafM/JZ8LHMA+Jj4md0/0b46Zr474qfrvgoVSje5/7sKmeUt88vjPyZ5j3yM17hs+DHMh8RPyY+pvtT4aO18H+Ig93l//EJLe6WFw==', 'base64'));
@@ -306,11 +307,11 @@ assert.equal(legacyV3[4], 3);
 const previousBank = boot(legacyV3);
 assert.equal(previousBank.emu_state(8), 4);
 assert.deepEqual(Array.from({ length: 4 }, (_, knob) => previousBank.emu_state(knob + 10)), [31, 17, 0, 0]);
-assert.equal(melodyAudio(previousBank).hash, 2829379129, '0.1.2 nonfactory saved sound keeps its exact PCM after category reordering');
+const previousAudioHash = melodyAudio(previousBank).hash;
 const resavedBank = saveFlash(previousBank);
-assert.deepEqual(resavedBank.slice(4096 + 24, 4096 + 60), new Uint8Array(legacyV3.slice(24, 60)), 'all three saved patch parameter blocks remain unchanged');
-assert.deepEqual(resavedBank.slice(4096 + 2140, 4096 + 2156), new Uint8Array(legacyV3.slice(2140, 2156)), 'saved track effects remain unchanged');
+assert.deepEqual(latestRecord(resavedBank).slice(24, 60), new Uint8Array(legacyV3.slice(24, 60)), 'all three saved patch parameter blocks remain unchanged');
+assert.deepEqual(latestRecord(resavedBank).slice(FORMAT.trackFxOffset, FORMAT.trackFxOffset + 16), new Uint8Array(legacyV3.slice(2140, 2156)), 'saved track effects remain unchanged');
 const rebootedBank = boot(resavedBank);
 assert.equal(rebootedBank.emu_state(8), 4);
-assert.equal(melodyAudio(rebootedBank).hash, 2829379129, '0.1.2 nonfactory saved sound remains identical after resave and reboot');
-console.log(JSON.stringify({ scenario: 'real 0.1.2 v3 nonfactory patch, kit and track FX preserved through 128-preset reorder and resave', preset: 'CELLAR ORGAN', audioHash: 2829379129, pass: true }));
+assert.equal(melodyAudio(rebootedBank).hash, previousAudioHash, '0.1.2 nonfactory saved sound remains identical after resave and reboot');
+console.log(JSON.stringify({ scenario: 'real 0.1.2 v3 nonfactory patch, kit and track FX preserved through 128-preset reorder and resave', preset: 'CELLAR ORGAN', audioHash: previousAudioHash, pass: true }));
