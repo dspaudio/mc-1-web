@@ -50,6 +50,26 @@ function drumAudio(e) {
     assert(energy > 0.1, 'each kit produces non-silent audio');
     return { hash, energy };
 }
+function melodyAudio(e) {
+    let hash = 2166136261, energy = 0;
+    for (const note of [0, 7, 14, 26]) {
+        for (const down of [true, false]) {
+            e.emu_input(down ? 1 << note : 0, 0);
+            for (let block = 0; block < 32; block++) {
+                e.emu_render(128);
+                for (const sample of new Float32Array(e.memory.buffer, e.emu_audio_ptr(), 256)) {
+                    assert(Number.isFinite(sample) && Math.abs(sample) < 1);
+                    energy += sample * sample;
+                    const pcm = Math.round(sample * 32768) & 65535;
+                    hash = Math.imul(hash ^ (pcm & 255), 16777619) >>> 0;
+                    hash = Math.imul(hash ^ (pcm >> 8), 16777619) >>> 0;
+                }
+            }
+        }
+    }
+    assert(energy > 0.1, 'saved melodic sound remains audible');
+    return { hash, energy };
+}
 function litKeys(e) {
     e.emu_frame();
     const leds = new Uint8Array(e.memory.buffer, e.emu_led_ptr(), 11);
@@ -227,10 +247,30 @@ for (let part = 0; part < 4; part++) {
     assert.deepEqual(Array.from({ length: 4 }, (_, knob) => legacy.emu_state(knob + 10)), [0, 0, 0, 0], `old v2 part ${part + 1} FX defaults to dry`);
     legacy.emu_enc(0, 1);
 }
+assert.equal(melodyAudio(legacy).hash, 3727938766, 'v2 saved patch keeps its pre-expansion PCM');
 legacy.emu_enc(0, 3);
 legacy.emu_enc(6, 7);
-const upgraded = boot(saveFlash(legacy));
+const upgradedFlash = saveFlash(legacy);
+assert.deepEqual(upgradedFlash.slice(4096 + 24, 4096 + 60), new Uint8Array(legacyV2.slice(24, 60)), 'v2 patch parameters survive bank reordering and resave');
+const upgraded = boot(upgradedFlash);
 assert.equal(upgraded.emu_state(0), 137, 'saving an old project preserves its tempo');
 assert.equal(upgraded.emu_state(5), 37, 'saving an old project preserves its effects');
 assert.equal(upgraded.emu_state(8), 7, 'saving an old project adds the selected kit');
-console.log(JSON.stringify({ scenario: 'real v2 project import, default kit, dry track FX and resave with kit 8', pass: true }));
+assert.equal(melodyAudio(upgraded).hash, 3727938766, 'resaved v2 patch keeps its pre-expansion PCM');
+console.log(JSON.stringify({ scenario: 'real v2 project import, original sound, default kit, dry track FX and resave with kit 8', audioHash: 3727938766, pass: true }));
+
+// Captured from 0.1.2: CELLAR ORGAN (old index 48), HOUSE kit and track delay/reverb.
+const legacyV3 = inflateSync(Buffer.from('eJzNkc1Kw1AQhU9qq0UK1ZW40pVYi1AKJVaC5hItoUlIWhosQfCHu3EjguAb+W4+hlEnNT0RCt5N72aYme8MIV/kjaINzJsWgHv/w33fPL59w3YdVuvZbVhHjzt4AGr7djtL7jRS1Kwn3bR0O4PWgdbuydzV9CDvFHhV1ndNFZYqFO9rwLDKGeWHjhsuPuYfzzR/DSR2qQ8BXe4nQGb/wYcy94kPiZ/Q/Znw8e/8pY/GV037P31e6+U+32+t2K/K79G+teg74qcjPkoVive5v0GVM8oPzhwjf6Z5RX7YZ0Q+C96X+RXxPvER3U+ED9bEf0/89MRHqULxPvfnVDmjvHPpGfkzzfvkJyafM/JZ8LHMA+Jj4md0/0b46Zr474qfrvgoVSje5/7sKmeUt88vjPyZ5j3yM17hs+DHMh8RPyY+pvtT4aO18H+Ig93l//EJLe6WFw==', 'base64'));
+assert.equal(legacyV3.length, 2156);
+assert.equal(legacyV3[4], 3);
+const previousBank = boot(legacyV3);
+assert.equal(previousBank.emu_state(8), 4);
+assert.deepEqual(Array.from({ length: 4 }, (_, knob) => previousBank.emu_state(knob + 10)), [31, 17, 0, 0]);
+assert.equal(melodyAudio(previousBank).hash, 2829379129, '0.1.2 nonfactory saved sound keeps its exact PCM after category reordering');
+const resavedBank = saveFlash(previousBank);
+assert.deepEqual(resavedBank.slice(4096 + 24, 4096 + 60), new Uint8Array(legacyV3.slice(24, 60)), 'all three saved patch parameter blocks remain unchanged');
+assert.deepEqual(resavedBank.slice(4096 + 2140, 4096 + 2156), new Uint8Array(legacyV3.slice(2140, 2156)), 'saved track effects remain unchanged');
+const rebootedBank = boot(resavedBank);
+assert.equal(rebootedBank.emu_state(8), 4);
+assert.equal(melodyAudio(rebootedBank).hash, 2829379129, '0.1.2 nonfactory saved sound remains identical after resave and reboot');
+console.log(JSON.stringify({ scenario: 'real 0.1.2 v3 nonfactory patch, kit and track FX preserved through 128-preset reorder and resave', preset: 'CELLAR ORGAN', audioHash: 2829379129, pass: true }));

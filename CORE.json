@@ -1,18 +1,22 @@
 {
   "repository": "https://github.com/dspaudio/mc-1",
-  "commit": "177510be73db56234c25ca2102e599456911c2a8",
+  "commit": "7a4c04c5834fc403337c38fa4383c2a5fe99eb0e",
   "files": {
+    "core/LICENSES/CC0-VSCO.txt": "36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673",
+    "core/assets/recorded/manifest.json": "47acfab4d4b9e4c8daec2734101e4f91a5b348960d62d3e418bccabc1ed53b11",
     "core/host/bridge.c": "66202b4359beddf392ccc0b3269ebcccebcc83a2646e9fa282e112c3ff2ed88c",
-    "core/src/demo.c": "4ab9296f682e5b96ae56f9b6a76f5068d613a7401722017a94f0a17099e5c502",
+    "core/src/demo.c": "6da79e086eaefa58cac8421bec2385229523e961577f5b1f7f5ca15ea3564fca",
     "core/src/effects.c": "0f8fe56b8e04aa6777d5dccd4234b348ea2b842ee35ad9ba9238aefb2528d25f",
-    "core/src/engine.c": "12dae2fa8538bf70a4f0d4ad57b6653bc6694698331f26f2eb2330738a0b0be4",
-    "core/src/factory.c": "5bc2dfc1d88edd96ebed7c44e5b8fa2eddebb4d89fad735aaa796028679ca79e",
-    "core/src/mcfm.h": "23ece49ada1fd7de67a60b6dae77f82ba0e7756c417bba95a1ef78effb0d277c",
-    "core/src/project.c": "65757e49fc60f7594b030072650e73e23c4b7bf470de925db827e61de2c6693b",
+    "core/src/engine.c": "321b11aaf43bcab38d9bda61e04617f1f4042fff534984c326f6bfdb8df8a088",
+    "core/src/factory.c": "6fbdd36c5efbc46dc82a6f19cc6e9879361b7c1f7aed4035a51d6f3a076849a5",
+    "core/src/mcfm.h": "0f409a990c4236782cd80c0ce16a5bdf9a68481df2221e9d22a593449df44903",
+    "core/src/presets.h": "4a0067dcaed8e43a529212589d38d61ac1766749e5f3d0123d0ec5c09eb5cb23",
+    "core/src/project.c": "05d9c575be5635a1befc18e56c174c473315b0d47e1509acbcfa5a6567d9b6cf",
+    "core/src/recorded_pcm.h": "61c3a354aa9f00d76a9ed057bc37952068666913b60261c4480cb963944fd178",
     "core/src/store.c": "47f07f755c7dcc71e5b21d607cda857df2edc4d396605a3eb88992cf8aa9c990",
     "core/src/store.h": "b8a9f9b75a2e16cb9b84d01282d807e20cd5ede0a05d33aba6f075b1206ac657",
     "core/src/tables.h": "9754b4e09ccfb7c9861f26176065a708a2809f854ad10c524dc83fd7c289d6fe",
-    "core/src/ui.c": "b5565133dbdc349f53f821bf74f1742724b8dd014ddbe9015d3cb86c7482c91a",
+    "core/src/ui.c": "203255d8942ce5bdcf82d67a93dce93e3a490c15ea82d2cbe3b4b4262d8da372",
     "core/src/ui.h": "8db4e2556e135095fddb5bb8844230ff52aa6cd0ea68b01c451088d24d44a3c8"
   }
 }
