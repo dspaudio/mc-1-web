@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>MC-1 0.1.0 — FM-1 emulator</title>
+<meta name="theme-color" content="#101114">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MC-1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+:root {
+    --txt: #c9cdd4;
+    --dim: #70757d;
+    --accent: #e8b84b;
+    /* safe-area insets, readable from JS (fitDevice) */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-user-select: none; user-select: none; }
+html, body { background: #101114; color: var(--txt); font-family: "Terminus (TTF)", "DejaVu Sans Mono", ui-monospace, monospace; }
+body { display: flex; flex-direction: column; align-items: center; padding: 18px 10px 40px; }
+
+h1 { font-size: 15px; letter-spacing: 3px; color: var(--dim); margin-bottom: 12px; font-weight: normal; }
+h1 b { color: var(--txt); }
+h1 .orbit-mark { font-family: system-ui, sans-serif; font-weight: 100; }
+
+/* the device: every control is absolutely positioned from the FM-1 user
+   manual's panel drawing (page 1), normalized to the case outline */
+#device {
+    position: relative;
+    background: linear-gradient(175deg, #24272c, #1a1c20 55%, #17191d);
+    border: 1px solid #000;
+    border-radius: 34px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.07), inset 0 -2px 6px rgba(0,0,0,.4);
+}
+
+.pane {                       /* recessed containers (buttons, OCT, keybed) */
+    position: absolute; transform: translate(-50%, -50%); background: #141619;
+    border: 1px solid #000; border-radius: 14px;
+    box-shadow: inset 0 1px 5px rgba(0,0,0,.65), 0 1px 0 rgba(255,255,255,.05);
+}
+
+.lab { position: absolute; font-size: 11px; letter-spacing: 2px; color: var(--dim); text-align: center; transform: translate(-50%, -50%); white-space: nowrap; }
+
+.cap {
+    position: absolute; border-radius: 50%; transform: translate(-50%, -50%);
+    background: radial-gradient(circle at 35% 30%, #3a3e46, #15161a 75%);
+    border: 1px solid #000; cursor: ns-resize; touch-action: none;
+    box-shadow: 0 3px 8px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,.1);
+}
+.cap::before {                /* knurled edge */
+    content: ""; position: absolute; inset: 7%; border-radius: 50%;
+    background: repeating-conic-gradient(#2c2f35 0deg 9deg, #202329 9deg 18deg);
+    opacity: .55;
+}
+.cap::after {                 /* pointer */
+    content: ""; position: absolute; left: 50%; top: 7%; width: 6%; height: 28%;
+    margin-left: -3%; border-radius: 3px; background: var(--pcol, #cfd3da); z-index: 1;
+    transform-origin: 50% 154%; transform: rotate(var(--rot, 0deg));
+}
+.cap .grab {                  /* enlarged touch target (compact only) */
+    position: absolute; inset: -16px; border-radius: 50%;
+    touch-action: none; display: none;
+}
+body.compact .cap .grab { display: block; }
+
+#bezel {
+    position: absolute; background: #000; border-radius: 12px;
+    border: 1px solid #000;
+    box-shadow: inset 0 0 14px rgba(0,0,0,.95), 0 1px 0 rgba(255,255,255,.05);
+    display: flex; align-items: center; justify-content: center;
+}
+#screen { image-rendering: pixelated; display: block; background: #000; }
+
+.btn {
+    position: absolute; transform: translate(-50%, -50%);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 11px; letter-spacing: 1px; line-height: 1.1;
+    background: linear-gradient(#34383f, #22252a);
+    border: 1px solid #000; border-radius: 8px; cursor: pointer; color: var(--txt);
+    box-shadow: 0 2px 4px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+    touch-action: none;
+}
+.btn.down { box-shadow: 0 1px 2px rgba(0,0,0,.5); background: linear-gradient(#2a2d33, #1d2024); }
+.btn.lit { color: #fff; box-shadow: 0 0 14px 2px rgba(240,220,160,.45), inset 0 1px 0 rgba(255,255,255,.1); background: linear-gradient(#5a5341, #3c3831); }
+.btn.glow { box-shadow: 0 0 8px 0 rgba(240,220,160,.2), 0 2px 4px rgba(0,0,0,.5); }
+.btn kbd { position: absolute; top: 1px; right: 4px; font-size: 8px; color: #565b63; }
+
+/* silicone pill keys; the slot is the LED window, as on the device */
+.pill {
+    position: absolute; transform: translate(-50%, -50%);
+    background: linear-gradient(#f2f0ea, #d7d4cb);
+    border: 1px solid #101214; cursor: pointer; touch-action: none;
+    box-shadow: 0 3px 6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.55);
+}
+.pill .slot {
+    position: absolute; left: 50%; top: 14%; width: 14%; height: 36%;
+    transform: translateX(-50%); border-radius: 999px; background: #1b1d20;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.8);
+}
+.pill.bk .slot { top: 12%; height: 40%; }
+.pill i { position: absolute; bottom: 6%; left: 0; right: 0; text-align: center; font-size: 8px; color: #8a877d; font-style: normal; letter-spacing: 0; }
+.pill.down { background: linear-gradient(#d2cfc8, #c1beb5); }
+.pill.lit .slot { background: #ffd467; box-shadow: 0 0 12px 3px rgba(255,212,103,.75), inset 0 0 2px rgba(120,80,0,.6); }
+.pill.glow .slot { background: #6b5c2e; box-shadow: 0 0 5px 1px rgba(255,212,103,.25); }
+.pill kbd { position: absolute; top: 4%; left: 6%; font-size: 8px; color: #a5a299; }
+.pill.bk kbd { color: #a5a299; }
+
+#power {
+    position: absolute; inset: 0; z-index: 10; border-radius: 34px;
+    background: rgba(8,9,11,.93); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px; cursor: pointer;
+}
+#power span { font-size: 26px; letter-spacing: 8px; color: var(--txt); }
+#power small { color: var(--dim); font-size: 11px; letter-spacing: 1px; }
+#power .ring {
+    width: 74px; height: 74px; border-radius: 50%; border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--accent);
+}
+
+/* compact mode (phones / small windows): the device is scaled — and in
+   portrait rotated 90° — to fill the viewport; emu.js sets the transform */
+body.compact { padding: 0; height: 100vh; height: 100dvh; overflow: hidden; }
+body.compact h1, body.compact #help { display: none; }
+body.compact #device { position: fixed; left: 50%; top: 50%; }
+
+/* fullscreen toggle — only on phones that support the Fullscreen API */
+#fs {
+    position: fixed; z-index: 20; display: none;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    right: calc(env(safe-area-inset-right, 0px) + 10px);
+    width: 42px; height: 42px; padding: 0;
+    align-items: center; justify-content: center;
+    font-size: 20px; line-height: 1; color: var(--txt); cursor: pointer;
+    background: rgba(32, 35, 40, .72); border: 1px solid rgba(0,0,0,.6);
+    border-radius: 11px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px rgba(0,0,0,.45);
+}
+#fs:active { background: rgba(52, 56, 63, .85); }
+body.compact.fs-ok #fs { display: flex; }
+
+/* firmware switcher — top-left corner, always available */
+#fw {
+    position: fixed; z-index: 20; display: flex; gap: 0; overflow: hidden;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    left: calc(env(safe-area-inset-left, 0px) + 10px);
+    background: rgba(32, 35, 40, .72); border: 1px solid rgba(0,0,0,.6);
+    border-radius: 11px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px rgba(0,0,0,.45); cursor: pointer;
+}
+#fw span {
+    padding: 11px 14px; font-size: 11px; letter-spacing: 2px; color: var(--dim);
+}
+#fw span.on { color: var(--accent); background: rgba(14, 15, 18, .8); }
+/* phones, landscape: top right beside the fullscreen button */
+body.compact #fw {
+    left: auto; bottom: auto;
+    right: calc(env(safe-area-inset-right, 0px) + 62px);
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+}
+body.compact #fw span { padding: 8px 10px; font-size: 10px; }
+/* phones, portrait (device rotated 90°): the pill rotates with it and sits
+   in the empty case strip along the right edge, beside the LCD — over no
+   control, and reading upright when the phone is held sideways */
+body.compact.rotated #fw {
+    top: 32%; bottom: auto; left: auto;
+    right: env(safe-area-inset-right, 0px);
+    transform: translateX(calc(50% - 15px)) rotate(90deg);
+    opacity: .94;
+}
+
+/* iOS tip overlay (no Fullscreen API on iPhone → Add to Home Screen) */
+#fstip {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center; padding: 24px;
+    background: rgba(8, 9, 11, .88); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+#fstip.show { display: flex; }
+#fstip .card {
+    max-width: 320px; text-align: center; line-height: 1.6;
+    background: #1c1f24; border: 1px solid #000; border-radius: 16px;
+    padding: 24px 22px; box-shadow: 0 16px 40px rgba(0,0,0,.6);
+}
+#fstip h2 { font-size: 15px; letter-spacing: 2px; color: var(--txt); font-weight: normal; margin-bottom: 12px; }
+#fstip p { font-size: 13px; color: var(--dim); }
+#fstip b { color: var(--accent); font-weight: normal; }
+#fstip .ok {
+    margin-top: 18px; display: inline-block; padding: 9px 22px; cursor: pointer;
+    font-size: 12px; letter-spacing: 1px; color: var(--txt);
+    background: #2a2e34; border: 1px solid #000; border-radius: 9px;
+}
+
+#help { max-width: 1200px; margin-top: 18px; font-size: 11px; color: var(--dim); line-height: 1.7; text-align: center; }
+#help b { color: var(--txt); font-weight: normal; }
+#help a { color: var(--accent); }
+
+/* the manual under the device (per firmware; hidden in compact mode) */
+#manual {
+    max-width: 1140px; width: 100%; margin-top: 34px;
+    font-family: "Inter Tight", "Inter", system-ui, -apple-system, sans-serif;
+    font-size: 14.5px; line-height: 1.7; color: #b7bdc6;
+    font-weight: 400;
+}
+body.compact #manual { display: none; }
+
+#manual h2 {
+    font-family: "Terminus (TTF)", "DejaVu Sans Mono", ui-monospace, monospace;
+    font-size: 14px; letter-spacing: 4px; font-weight: normal; color: var(--accent);
+    display: flex; align-items: center; gap: 14px;
+    margin: 36px 0 18px;
+}
+#manual h2::before { content: ""; width: 26px; height: 2px; background: var(--accent); border-radius: 2px; }
+#manual h2::after { content: ""; flex: 1; height: 1px; background: #23262c; }
+
+#manual .lead {
+    font-size: 16px; line-height: 1.75; color: #ccd1d8; max-width: 72ch;
+    margin-bottom: 20px;
+}
+
+#manual .cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 14px; margin-bottom: 14px;
+}
+#manual .card {
+    background: linear-gradient(170deg, #1c1f24, #171a1e);
+    border: 1px solid #0c0d0f; border-radius: 14px;
+    padding: 18px 20px 16px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.04);
+}
+#manual .card.wide { grid-column: 1 / -1; }
+#manual .card.note { border-left: 3px solid var(--accent); }
+#manual h3 {
+    font-family: "Terminus (TTF)", "DejaVu Sans Mono", ui-monospace, monospace;
+    font-size: 11px; letter-spacing: 3px; font-weight: normal; color: #8d939c;
+    margin: 0 0 10px;
+}
+#manual p, #manual ul { margin-bottom: 10px; }
+#manual p:last-child, #manual ul:last-child { margin-bottom: 0; }
+#manual ul { padding-left: 0; list-style: none; }
+#manual li { margin-bottom: 8px; padding-left: 16px; position: relative; }
+#manual li::before { content: ""; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: #4a4f57; }
+#manual b, #manual strong { color: #eceef1; font-weight: 500; }
+#manual a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(232,184,75,.35); }
+#manual a:hover { border-bottom-color: var(--accent); }
+#manual .src { font-size: 12.5px; color: #80868f; margin-top: 16px; }
+
+#manual kbd {
+    font-family: "Terminus (TTF)", "DejaVu Sans Mono", ui-monospace, monospace;
+    background: linear-gradient(#32363d, #24272c); border: 1px solid #000; border-radius: 5px;
+    padding: 1px 7px 2px; font-size: 11px; color: #e4e7eb;
+    box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 1px 2px rgba(0,0,0,.4);
+    white-space: nowrap;
+}
+#manual .chip {
+    font-family: "Terminus (TTF)", "DejaVu Sans Mono", ui-monospace, monospace;
+    display: inline-block; min-width: 46px; text-align: center;
+    background: linear-gradient(#3b3526, #2b2820); border: 1px solid #000; border-radius: 6px;
+    padding: 3px 9px; font-size: 11px; letter-spacing: 1px; color: var(--accent);
+    box-shadow: 0 1px 0 rgba(255,255,255,.06) inset;
+    white-space: nowrap;
+}
+#manual .kn {
+    font-family: "Terminus (TTF)", "DejaVu Sans Mono", ui-monospace, monospace;
+    font-size: 11.5px; color: #9aa1ab; letter-spacing: .5px;
+}
+
+#manual table { border-collapse: collapse; width: 100%; }
+#manual th, #manual td { padding: 10px 12px; text-align: left; vertical-align: top; }
+#manual th {
+    font-family: "Terminus (TTF)", "DejaVu Sans Mono", ui-monospace, monospace;
+    font-size: 10px; letter-spacing: 2px; font-weight: normal; color: #80868f;
+    border-bottom: 1px solid #2a2e34; padding-top: 0;
+}
+#manual td { border-bottom: 1px solid #202329; color: #b7bdc6; }
+#manual tr:last-child td { border-bottom: none; }
+#manual td:first-child { white-space: nowrap; }
+</style>
+</head>
+<body>
+<h1 id="title">MC-1 0.1.0 · FM-1 emulator</h1>
+<button id="fs" aria-label="Toggle fullscreen">⛶</button>
+<div id="fstip"><div class="card"><h2>FULLSCREEN</h2><p>Use Share → Add to Home Screen on iPhone.</p><span class="ok">GOT IT</span></div></div>
+<div id="device"><div id="power"><div class="ring">⏻</div><span>POWER ON</span><small>MC-1 0.1.0 · actual C engine and screen · sound on</small></div></div>
+<div id="help"><b>MC-1 ONLY</b> · Drag or scroll knobs · Space: PLAY · R: REC · 1–0: panel buttons · Z/X: octave · Arrow keys: part/preset<br>
+<span id="status">SAVE twice while stopped persists this project locally in this browser.</span><br>
+<a href="https://github.com/dspaudio/mc-1-web">Emulator source</a> · <a href="https://github.com/dspaudio/mc-1">Firmware and complete preset list</a></div>
+<section id="manual"><h2>PLAY MC-1</h2><div class="cards">
+<div class="card"><h3>NEON SPIRAL / EFFECTS</h3><p>While stopped: press GLO twice, turn KNOB4 clockwise to load NEON SPIRAL, then PLAY. Loading replaces the working project. HOME then FX opens DELAY / REVERB / DRIVE / CHORUS.</p></div>
+<div class="card"><h3>PARTS AND SOUNDS</h3><p>SELECT chooses three melodic parts or drums. ALGORITHM browses melodic presets; PRESETS queues one of four patterns. ARP mutes the selected part. HOME gives cutoff, resonance, decay and PCM/glide.</p></div>
+<div class="card"><h3>STEP EDIT / DRUMS</h3><p>EDIT toggles note entry; keys enter a note at the selected step. Drum knobs select SOUND / STEP / HIT / LEVEL. ENV adjusts melodic ADSR. REC records live notes quantized to the current step.</p></div>
+<div class="card"><h3>SAVE AND LIMITS</h3><p>SAVE twice while stopped writes the actual C A/B project format to emulated flash, persisted in IndexedDB. Reload restores it. Browser storage can be cleared by your browser. This is a behavioral FM-1 emulator, not a pi32v2 CPU or timing simulator. No USB, MIDI, calibration, firmware flashing or hardware guarantees.</p></div></div>
+<p class="src">FM-1 faceplate, input and AudioWorklet infrastructure adapted from <a href="https://github.com/dspaudio/orbit-web-emu">ORBIT web emulator</a>, originally <a href="https://github.com/sabliran/sloop-web-emu">SLOOP web emulator</a>. GPL-3.0-only. Only MC-1 firmware is included. Original sound design; not affiliated with Roland or M-VAVE.</p></section>
+<script src="emu.js?v=0.1.0"></script></body></html>

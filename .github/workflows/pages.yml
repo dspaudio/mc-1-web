@@ -1,0 +1,38 @@
+name: build-test-pages
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang lld
+      - run: python3 tools/check_core.py && python3 tools/build.py
+      - run: |
+          cc -O2 -std=c11 -Wall -Wextra -Werror -Icore/src core/src/*.c tests/native.c -o /tmp/mc1-native
+          /tmp/mc1-native > build/native.json
+          node tests/wasm.mjs | tee build/verification.json
+          node tests/worklet.mjs
+          rm build/native.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mc-1-web-tested
+          path: build/
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: build/
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
