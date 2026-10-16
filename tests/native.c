@@ -46,9 +46,9 @@ static uint32_t patterns_hash(uint32_t *record_hash){
     emu_enc(0,3);emu_enc(3,15-(int)emu_state(28));emu_input(1u<<15,0);emu_input(0,0);
     tap(8);emu_enc(0,-3);tap(13);tap(12);emu_render(1);
     emu_input(1u<<7,0);emu_input(0,0);emu_enc(2,17);
-    tap(2);tap(2);emu_enc(2,41);tap(12);tap(13);
+    emu_enc(0,3);tap(2);tap(2);emu_enc(2,41);tap(12);tap(13);
     assert(engine.project.automation_count==2);
-    assert(engine.project.automation[0].address==315&&engine.project.automation[1].address==319);
+    assert(engine.project.automation[0].address==315&&engine.project.automation[1].address==318);
     tap(9);tap(9);tap(9);tap(9);
     *record_hash=2166136261u;
     for(unsigned i=0;i<MC_RECORD_BYTES;i++)*record_hash=(*record_hash^flash[MC_STORE_BYTES+i])*16777619u;

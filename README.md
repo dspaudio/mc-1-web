@@ -1,8 +1,16 @@
-# MC-1 web emulator 0.3.0
+# MC-1 web emulator 1.0.0
 
 An FM-1 faceplate emulator running the original MC-1 C DSP, sequencer, UI and A/B project storage in an AudioWorklet. Adapted from [dspaudio/orbit-web-emu](https://github.com/dspaudio/orbit-web-emu).
 
 Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector. Browser flash uses its own `mc1-emu-v1` IndexedDB database.
+
+## New in 1.0.0
+
+Two shared eight-type FX banks (R/D and C/F), independent part sends, SENDS/TYPES controls and version 7 project migration match the physical MC-1. The optimized C core retains eight melodic voices and six drum voices; browser speed is not the device timing evidence. See the firmware validation record for measured package hashes and workloads.
+
+This repository and its Pages build run only the emulator. Physical firmware
+installation belongs to the [MC-1 product site](https://dspaudio.github.io/mc-1/),
+maintained by the firmware repository; it is not bundled or downloaded here.
 
 ## Added and changed in 0.3.0
 
@@ -102,19 +110,28 @@ and the 128-sound and 64-pattern lists three times faster; tempo moves six times
 turns, direction changes and switching controls return to one step. Short lists,
 including parts and drum kits, always move one choice per step.
 
-HOME then FX opens the selected part's delay, reverb, drive and modulation controls.
-The four knobs edit that part only, including DRUMS. Press FX again to switch
-between track and master effects; HOME then FX always returns to track effects.
-ENV cycles AMOUNTS → TYPES → FILTERS. In AMOUNTS and TYPES, knobs 1–4 control
-delay, reverb, drive and modulation. In FILTERS, knob 1 is HPF and knob 2 is LPF;
-zero bypasses each filter. All four parts' settings and master effects are saved.
+Effects use two global shared banks, R/D (reverb/delay) and C/F (chorus/flanger).
+HOME then FX opens FX SENDS for the selected part, including DRUMS: knob 1 is
+R/D SEND and knob 2 is C/F SEND, 0–127, with zero dry. Each of the four parts has
+its own two sends. ENV switches SENDS and TYPES. FX TYPES is global: knob 1 is
+R/D TYPE and knob 2 is C/F TYPE, clamped to 0–7. Knobs 3 and 4 do nothing on
+either page. The master has volume and limiter only.
 
-| Effect | Types |
-|---|---|
-| Delay | DIGITAL, TAPE, PINGPONG, MULTITAP |
-| Reverb | ROOM, HALL, PLATE, SPRING |
-| Drive | SOFT, HARD, FOLD, FUZZ |
-| Modulation | CHORUS, PHASER, FLANGER |
+| # | R/D | C/F |
+|---|---|---|
+| 0 | ROOM1 | CHORUS1 |
+| 1 | ROOM2 | CHORUS2 |
+| 2 | ROOM3 | CHORUS3 |
+| 3 | HALL1 | CHORUS4 |
+| 4 | HALL2 | FB CHORUS |
+| 5 | PLATE | FLANGER |
+| 6 | DELAY | SHORT DLY |
+| 7 | PANNING DLY | FB SHORT DLY |
+
+These are original fixed-point approximations, not Roland algorithm emulation.
+Format v7 saves the sends and bank types. Older projects are migrated on load:
+R/D send takes the larger old delay or reverb amount, C/F send takes the old
+modulation amount, and bank types map from the first part using that effect.
 
 Outside the mixer, ARP opens the selected melodic part's arpeggiator page;
 press ARP again to return HOME. Knobs 1–4 select MODE, RATE, OCT and GATE.
@@ -439,7 +456,7 @@ Select DRUMS with SELECT, then turn PRESETS to choose a kit. ALGORITHM continues
 to choose patterns. Kits share the sixteen lane roles below, so a pattern can be
 played with any kit. Projects saved by older MC-1 versions load with BASE 808,
 dry track effects and their original master effects; saving upgrades the project
-to format v4.
+to format v7.
 
 | # | Kit name | Synthesis character |
 |---|---|---|

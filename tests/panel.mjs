@@ -106,8 +106,8 @@ for (let part = 0; part < 3; part++) {
     tap(e, 'SAVE'); tap(e, 'SAVE');
     assert(e.emu_flash_gen() > 0, 'panel notes must be saved successfully');
     const saved = new Uint8Array(e.memory.buffer, e.emu_flash_ptr(), e.emu_flash_size());
-    assert.equal(saved[4], 6, 'the saved project uses format version 6');
-    // Format v6 keeps the 20-byte header, 72-byte settings and 8-byte steps.
+    assert.equal(saved[4], 7, 'the saved project uses format version 7');
+    // v7 preserves the header, existing settings and step offsets.
     const notes = Array.from({ length: 7 }, (_, step) => saved[20 + 72 + part * 16 * 8 + step * 8]);
     assert.deepEqual(notes, [60, 72, 60, 48, 24, 96, 108], `OCT buttons transpose part ${part + 1} and clamp at +/-3`);
     octaveNotes.push(notes);
@@ -154,6 +154,20 @@ tap(e, 'PLAY');
 assert.deepEqual(litKeys(e), [], 'stopping clears the sequencer and PLAY LEDs');
 console.log(JSON.stringify({ scenario: '16 white sequencer LEDs, wraparound, PLAY/REC/STOP', sequence, pass: true }));
 
+const heldLeds = boot();
+for (let playing = 0; playing < 2; playing++) {
+    if (playing) tap(heldLeds, 'PLAY');
+    for (let note = 0; note < 27; note++) {
+        heldLeds.emu_input(1 << note, 0);
+        const expected = [...new Set([14 + note, ...(playing ? [panel.BTN.PLAY, 14 + panel.WHITE_IDS[0]] : [])])].sort((a, b) => a - b);
+        assert.deepEqual(litKeys(heldLeds), expected, 'held key LED combines with the step cursor, including black keys');
+        heldLeds.emu_input(0, 0);
+        assert.deepEqual(litKeys(heldLeds), playing ? [panel.BTN.PLAY, 14 + panel.WHITE_IDS[0]].sort((a, b) => a - b) : [], 'release removes only the held-key layer');
+        while (heldLeds.emu_midi_pop()) {}
+    }
+}
+console.log(JSON.stringify({ scenario: 'all27 held-key LEDs, stopped/playing, cursor overlap and release', pass: true }));
+
 const colors = boot();
 const factoryImage = saveFlash(colors);
 tap(colors, 'PLAY'); colors.emu_render(1);
@@ -184,7 +198,11 @@ tap(colors, 'GLO'); tap(colors, 'ARP'); tap(colors, 'HOME'); colors.emu_frame();
 const mutedDrums = new Uint16Array(colors.memory.buffer, colors.emu_fb_ptr(), 240 * 240);
 for (let lane = 0; lane < 16; lane++) assert.notEqual(mutedDrums[(25 + lane * 9) * 240 + 30 + colors.emu_state(24) * 13], 0x67e8, 'muted drum lanes do not show green hits');
 tap(colors, 'PLAY'); colors.emu_frame();
-assert(!new Uint16Array(colors.memory.buffer, colors.emu_fb_ptr(), 240 * 240).includes(0x67e8), 'stopping removes playback green');
+const stoppedPixels = new Uint16Array(colors.memory.buffer, colors.emu_fb_ptr(), 240 * 240);
+assert(!stoppedPixels.subarray(24 * 240, 168 * 240).includes(0x67e8), 'stopping removes playback green from the drum grid');
+let patternGreen = 0;
+for (let y = 4; y < 11; y++) for (let x = 151; x < 187; x++) patternGreen += stoppedPixels[y * 240 + x] === 0x67e8;
+assert(patternGreen > 0, 'the static current-next pattern label stays green while stopped');
 console.log(JSON.stringify({ scenario: 'bright green active steps, orange selection, rest/mute/stop semantics and white-only green panel selectors', coloredHits, uncoloredRests, pass: true }));
 
 const mixer = boot();
@@ -249,34 +267,36 @@ console.log(JSON.stringify({ scenario: 'eight drum kits: PRESETS wrap, ALGORITHM
 
 const fx = boot();
 tap(fx, 'FX');
-const trackFx = Array.from({ length: 4 }, (_, part) => Array.from({ length: 4 }, (_, knob) => (part + 1) * 10 + knob));
+const trackFx = Array.from({ length: 4 }, (_, part) => Array.from({ length: 2 }, (_, knob) => (part + 1) * 10 + knob));
 for (let part = 0; part < 4; part++) {
-    for (let knob = 0; knob < 4; knob++) fx.emu_enc(knob + 2, trackFx[part][knob]);
+    for (let knob = 0; knob < 2; knob++) fx.emu_enc(knob + 2, trackFx[part][knob]);
+    fx.emu_enc(4, 100); fx.emu_enc(5, 100);
     fx.emu_enc(0, 1);
 }
 for (let part = 0; part < 4; part++) {
-    assert.deepEqual(Array.from({ length: 4 }, (_, knob) => fx.emu_state(knob + 10)), trackFx[part], `FX changes only selected part ${part + 1}`);
+    assert.deepEqual(Array.from({ length: 2 }, (_, knob) => fx.emu_state(knob + 10)), trackFx[part], `FX changes only selected part ${part + 1}`);
     fx.emu_enc(0, 1);
 }
-assert.equal(fx.emu_state(5), 0, 'editing track effects preserves master effects');
+assert.equal(fx.emu_state(5), 0, 'editing track effects preserves inactive legacy master data');
 tap(fx, 'FX'); fx.emu_enc(2, 19);
-assert.equal(fx.emu_state(5), 19, 'FX again switches to master scope');
-assert.equal(fx.emu_state(10), 10, 'master editing preserves track effects');
+trackFx[0][0] += 19;
+assert.equal(fx.emu_state(5), 0, 'FX never opens a master scope');
+assert.equal(fx.emu_state(10), 29, 'FX again keeps the selected-track scope');
 tap(fx, 'HOME'); tap(fx, 'FX'); fx.emu_enc(2, 1);
 trackFx[0][0]++;
-assert.equal(fx.emu_state(10), 11, 'HOME then FX returns to selected-track scope');
-assert.equal(fx.emu_state(5), 19);
+assert.equal(fx.emu_state(10), 30, 'HOME then FX retains selected-track values');
+assert.equal(fx.emu_state(5), 0);
 const fxFlash = saveFlash(fx);
-assert.equal(fxFlash[4], 6);
-assert.equal(fxFlash[6] + fxFlash[7] * 256, FORMAT.bodyBytes, 'v6 includes 64 patterns and automation');
-assert.deepEqual(Array.from(fxFlash.slice(FORMAT.trackFxOffset, FORMAT.trackFxOffset + 16)), trackFx.flat(), 'all 16 track-FX parameters are serialized');
+assert.equal(fxFlash[4], 7);
+assert.equal(fxFlash[6] + fxFlash[7] * 256, FORMAT.bodyBytes, 'v7 includes 64 patterns, automation and shared FX');
+assert.deepEqual(Array.from(fxFlash.slice(FORMAT.fxSendOffset, FORMAT.fxSendOffset + 8)), trackFx.flat(), 'all eight part sends are serialized');
 const restoredFx = boot(fxFlash);
-assert.equal(restoredFx.emu_state(5), 19, 'master FX survives reboot');
+assert.equal(restoredFx.emu_state(5), 0, 'track-only editing leaves legacy master data unchanged through reboot');
 for (let part = 0; part < 4; part++) {
-    assert.deepEqual(Array.from({ length: 4 }, (_, knob) => restoredFx.emu_state(knob + 10)), trackFx[part], `part ${part + 1} FX survives reboot`);
+    assert.deepEqual(Array.from({ length: 2 }, (_, knob) => restoredFx.emu_state(knob + 10)), trackFx[part], `part ${part + 1} FX survives reboot`);
     restoredFx.emu_enc(0, 1);
 }
-console.log(JSON.stringify({ scenario: 'selected-track FX independence, master toggle, HOME reset and v6 save/reboot', trackFx, pass: true }));
+console.log(JSON.stringify({ scenario: 'selected-part send independence, no master toggle, HOME reset and v7 save/reboot', trackFx, pass: true }));
 
 // Captured from the original v2 WASM writer: factory project, BPM 137 and delay 37.
 const legacyV2 = inflateSync(Buffer.from('eJzNkUFKw1AQhv8ExVKELlyIOzcuaimEQnlWguYRLaFJSFoalGzcvI07waUn8EaewQt4BW+hqZ1q/CMEfJvOZpiZ75/Nl4bT1EXUcQA8vRwMXt/fPp7RxWr2SkcNu8oA7pHqlfmdQQHXuTcdx/RKGBMbE5zeBobqBOsaAo/a+eqFxq8OzXcXmDQ5q/zEDxKD/5dt/hrIVW1OAFOf50Cp/uAT2UfEJ8TP6f9S+Oxn/zDC7qoXo/Vc9Z36XN33Wu5t+UO673/PffHTFx+1Ds33yt+4yVnlx2e+lT/bvCY/7DMlnxs+kv0V8RHxKf3PhY+3xL8nfjzxUevQfK/8+U3OKu9fhlb+bPMR+cnI55J8bvhM9jHxGfFL+n8j/GJL/A/Ez0B81Do03yt/qslZ5dX5hZU/23xIfmYtPjf8TPZT4mfEZ/R/IXy6Ff6P8QkT/pff', 'base64'));
@@ -307,7 +327,7 @@ assert.equal(legacyV3.length, 2156);
 assert.equal(legacyV3[4], 3);
 const previousBank = boot(legacyV3);
 assert.equal(previousBank.emu_state(8), 4);
-assert.deepEqual(Array.from({ length: 4 }, (_, knob) => previousBank.emu_state(knob + 10)), [31, 17, 0, 0]);
+assert.deepEqual(Array.from({ length: 4 }, (_, knob) => previousBank.emu_state(knob + 10)), [31, 0, 6, 0], 'v3 delay/reverb migrate to one RD send and global delay type');
 const previousAudioHash = melodyAudio(previousBank).hash;
 const resavedBank = saveFlash(previousBank);
 assert.deepEqual(latestRecord(resavedBank).slice(24, 60), new Uint8Array(legacyV3.slice(24, 60)), 'all three saved patch parameter blocks remain unchanged');

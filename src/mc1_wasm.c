@@ -40,9 +40,10 @@ static void service(void){
 API("emu_frame") void emu_frame(void){
  engine.master=(uint32_t)((uint64_t)(unsigned)master*(unsigned)master*MC_MASTER_MAX/(1023u*1023u));
  service();
+ mc_ui_prepare_frame(&engine,&ui);
  for(unsigned y=0;y<240;y+=8)mc_ui_strip(&engine,&ui,y,8,fb+y*240);
  for(unsigned c=0;c<11;c++){leds[c]=dims[c]=0;for(unsigned r=1;r<5;r++){
- int key=matrix[r][c];int on=(key==0&&ui.octave<0)||(key==1&&ui.octave>0)||(key==12&&engine.playing)||(key==13&&engine.recording)||(engine.playing&&key==14+step_keys[engine.step]);
+ int key=matrix[r][c];int on=(key==0&&ui.octave<0)||(key==1&&ui.octave>0)||(key==12&&engine.playing)||(key==13&&engine.recording)||(engine.playing&&key==14+step_keys[engine.step])||(key>=14&&((notes>>(key-14))&1u));
  if(on)leds[c]|=(uint8_t)(1u<<r);
  }}fb_gen++;
 }
@@ -51,10 +52,10 @@ API("emu_start") void emu_start(void){emu_frame();}
 API("emu_render") void emu_render(unsigned n){if(n>512)n=512;mc_render(&engine,pcm,n);for(unsigned i=0;i<n*2;i++)audio[i]=(float)pcm[i]/32768.0f;}
 API("emu_input") void emu_input(uint32_t nn,uint32_t bb){
  static const uint8_t map[14]={12,13,0,1,2,3,4,5,6,7,8,9,10,11};
- for(unsigned i=0;i<14;i++)if((bb&~buttons)&(1u<<i))mc_ui_button(&engine,&ui,map[i]);
+ for(unsigned i=0;i<14;i++)if((bb^buttons)&(1u<<i))mc_ui_button_state(&engine,&ui,map[i],(int)((bb>>i)&1u));
  for(unsigned i=0;i<27;i++)if((nn^notes)&(1u<<i)){
- if(nn&(1u<<i)){held_part[i]=engine.selected;int n=53+(int)i+ui.octave*12;held_note[i]=(uint8_t)(n<12?12:n>108?108:n);mc_ui_key(&engine,&ui,i,1);}
- else {ui.preset_popup=ui.encoder_active=0;if(held_part[i]<3)mc_key(&engine,held_part[i],held_note[i],100,0);}
+ if(nn&(1u<<i)){held_part[i]=engine.selected;int n=53+(int)i+ui.octave*12;held_note[i]=(uint8_t)(n<12?12:n>108?108:n);mc_ui_key(&engine,&ui,i,1);if(ui.pattern_keys&(1u<<i))held_part[i]=255;}
+ else {ui.preset_popup=ui.encoder_active=0;if(ui.pattern_keys&(1u<<i))mc_ui_key(&engine,&ui,i,0);else if(held_part[i]<3)mc_key(&engine,held_part[i],held_note[i],100,0);}
  }
  notes=nn;buttons=bb;service();
 }
@@ -76,7 +77,7 @@ API("emu_midi_pop") uint32_t emu_midi_pop(void){McMidiMessage m;if(!mc_midi_pop(
 /* Read-only test diagnostics, also useful for browser bug reports. */
 API("emu_state") uint32_t emu_state(unsigned k){
  unsigned p=engine.selected<3?engine.selected:0;
- switch(k){case 0:return engine.project.bpm;case 1:return engine.selected;case 2:return ui.page;case 3:return engine.project.demo;case 4:return engine.playing;case 5:return engine.project.fx[0];case 6:return ui.preset[p];case 7:return engine.project.patch[0].cutoff;case 8:return engine.project.drum_kit;case 9:return engine.pattern;case 10:case 11:case 12:case 13:return engine.project.track_fx[engine.selected][k-10];case 14:return ui.preset_popup;
+ switch(k){case 0:return engine.project.bpm;case 1:return engine.selected;case 2:return ui.page;case 3:return engine.project.demo;case 4:return engine.playing;case 5:return engine.project.fx[0];case 6:return ui.preset[p];case 7:return engine.project.patch[0].cutoff;case 8:return engine.project.drum_kit;case 9:return engine.pattern;case 10:case 11:return engine.project.fx_send[engine.selected][k-10];case 12:case 13:return engine.project.fx_bus_type[k-12];case 14:return ui.preset_popup;
  case 15:return engine.arp[p].events;case 16:return engine.project.arp[p].enabled;
  case 17:return engine.project.arp[p].mode;case 18:return engine.project.arp[p].rate;
  case 19:return engine.project.arp[p].octaves;case 20:return engine.project.arp[p].gate;

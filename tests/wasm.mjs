@@ -28,11 +28,11 @@ for(let part=0;part<3;part++){
 e.emu_enc(0,-3);
 tap(e,7);assert.equal(e.emu_state(2),5);tap(e,7);assert.equal(e.emu_state(2),2);tap(e,7);assert.equal(e.emu_state(2),4);e.emu_enc(5,1);assert.equal(e.emu_state(3),1);assert.equal(e.emu_state(5),48);
 tap(e,8);tap(e,2);assert.equal(e.emu_state(2),3);assert.equal(e.emu_state(10),0);
-e.emu_enc(2,1);assert.equal(e.emu_state(10),1);assert.equal(e.emu_state(5),48,'track FX preserves the demo master FX');
-tap(e,2);e.emu_enc(2,1);assert.equal(e.emu_state(5),49,'FX again opens master FX');assert.equal(e.emu_state(10),1);
+e.emu_enc(2,1);assert.equal(e.emu_state(10),1);assert.equal(e.emu_state(5),48,'track FX preserves inactive demo master metadata');
+tap(e,2);e.emu_enc(2,1);assert.equal(e.emu_state(5),48,'FX keeps the selected-track scope');assert.equal(e.emu_state(10),2);
 tap(e,9);tap(e,9);assert(e.emu_flash_gen()>0);
-const flash=new Uint8Array(e.memory.buffer,e.emu_flash_ptr(),e.emu_flash_size()).slice();const restored=boot(flash);assert.equal(restored.emu_state(3),1);assert.equal(restored.emu_state(5),49);assert.equal(restored.emu_state(10),1);
-// Restore both FX scopes before exact native comparison.
+const flash=new Uint8Array(e.memory.buffer,e.emu_flash_ptr(),e.emu_flash_size()).slice();const restored=boot(flash);assert.equal(restored.emu_state(3),1);assert.equal(restored.emu_state(5),48);assert.equal(restored.emu_state(10),2);
+// Restore both selected-track edits before exact native comparison.
 e.emu_enc(2,-1);tap(e,2);e.emu_enc(2,-1);assert.equal(e.emu_state(5),48);assert.equal(e.emu_state(10),0);tap(e,12);assert.equal(e.emu_state(4),1);
 let peak=0,energy=0,hash=2166136261;
 for(let b=0;b<Math.ceil(60*44100/128);b++){e.emu_render(128);const a=new Float32Array(e.memory.buffer,e.emu_audio_ptr(),256);for(const v of a){assert(Number.isFinite(v)&&Math.abs(v)<1);peak=Math.max(peak,Math.abs(v));energy+=v*v;const x=Math.round(v*32768)&65535;hash=Math.imul(hash^(x&255),16777619)>>>0;hash=Math.imul(hash^(x>>8),16777619)>>>0;}}

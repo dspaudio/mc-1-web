@@ -24,6 +24,7 @@ jobs:
           node tests/controls.mjs
           node tests/performance.mjs
           node tests/patterns.mjs
+          node tests/emulator-site.mjs
           rm build/native.json build/midi-native.json
       - uses: actions/upload-artifact@v4
         with:

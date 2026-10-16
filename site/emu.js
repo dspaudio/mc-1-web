@@ -14,7 +14,7 @@ const DEV = { w: 963, h: 588 };
  * Same hardware, same faceplate; only the wasm differs. The choice is kept
  * in localStorage and each firmware has its own flash image in IndexedDB. */
 const FW = 'mc1';
-document.getElementById('title').textContent = 'MC-1 0.3.0 · FM-1 emulator';
+document.getElementById('title').textContent = 'MC-1 1.0.0 · FM-1 emulator';
 /* ---- panel mapping (firmware/src/panel.c PANEL_DEFAULT) ----
  * label order: FX SCL ENV LFO EDIT GLO HOME SAVE ARP SEQ PLAY REC OCT- OCT+ */
 const BTN = { 'OCT-': 0, 'OCT+': 1, FX: 2, SCL: 3, ENV: 4, LFO: 5, EDIT: 6, GLO: 7,
@@ -313,9 +313,9 @@ async function powerOn() {
     try {
     ctx = new AudioContext({ sampleRate: 44100, latencyHint: 'interactive' });
     if(ctx.sampleRate !== 44100) throw new Error('44.1 kHz audio context required');
-    await ctx.audioWorklet.addModule('worklet.js?v=0.3.0');
+    await ctx.audioWorklet.addModule('worklet.js?v=1.0.0');
     const [wasmBytes, flashImage] = await Promise.all([
-        fetch(FW + '.wasm?v=0.3.0').then(response => {
+        fetch(FW + '.wasm?v=1.0.0').then(response => {
             if (!response.ok) throw new Error('Firmware download failed (HTTP ' + response.status + ')');
             return response.arrayBuffer();
         }),
@@ -354,7 +354,7 @@ async function powerOn() {
         }),
     ]);
     sendMaster();
-    status.textContent = 'MC-1 0.3.0 · 64 patterns · 128 presets · audio ready' + (storageNotice ? ' · ' + storageNotice : '');
+    status.textContent = 'MC-1 1.0.0 · 64 patterns · 128 presets · audio ready' + (storageNotice ? ' · ' + storageNotice : '');
     power.remove();
     node.port.postMessage({ t: 'start' });
     } catch(e) {
