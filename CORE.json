@@ -1,16 +1,16 @@
 {
   "repository": "https://github.com/dspaudio/mc-1",
-  "commit": "4b1486f482e3df8e31e3cde0289f7f0a162ebc98",
+  "commit": "3f0fb2ed5b3dc880d3c0645b6e3fab35f52ee3ca",
   "files": {
     "core/LICENSES/CC0-VSCO.txt": "36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673",
     "core/assets/recorded/manifest.json": "47acfab4d4b9e4c8daec2734101e4f91a5b348960d62d3e418bccabc1ed53b11",
     "core/host/bridge.c": "a02069688103a29d81ee3c38aadb4597c67447c525d96499e341a95def87a687",
-    "core/src/demo.c": "f672d5a373400d9ad9fc1315c700ae6dffb290cb2066f69e6da24a415cbc1fb2",
-    "core/src/effects.c": "51dbef2c5c570b283ec80d98071bd04c154d863f88b6c07836cc02fdc53cfdcf",
+    "core/src/demo.c": "0605247d0c874685eea42a6ca54291bbe3971906224b547bb315200cf4c3be74",
+    "core/src/effects.c": "7641c301af74b6425f1dc1008d85ea695c4538d5f48da2cbc7fd4ff923868ecd",
     "core/src/engine.c": "33cc95c83a3f51a98f1fbc0f5e655e755c719ace387150f44114b976de939639",
-    "core/src/factory.c": "90dddccb6aac2cc80922192c92c402fa34135d6cfb6b41b992a3b450cffced2a",
+    "core/src/factory.c": "7853c1e74e7309c7ac3f6916472d31162ede9dd9b8a4518ee7477919a2ee56f8",
     "core/src/fixed.h": "17b3218568707007510b9e802c1b9da657d0c42e32f16366f7855cd7d8cda36c",
-    "core/src/mcfm.h": "7949d9fc8a1e44cbe6d9bc07719fd935e9f2abd34d4b7ae824ef7ebe1137ce1f",
+    "core/src/mcfm.h": "3ad8a87fe1f5b3c0c2acd595a1e1ad9f2de8c1df4b6e5e12fc16b35031cc4fe2",
     "core/src/midi.c": "4ff1f01b7ee36a6ea22196266a834637cc35d468f8ab392c4d89334338029c86",
     "core/src/midi.h": "4c902d39d573541b9469c16931e86093c8c095323ea5bf9cd0ea1aef2bda7343",
     "core/src/presets.h": "4a0067dcaed8e43a529212589d38d61ac1766749e5f3d0123d0ec5c09eb5cb23",
@@ -19,9 +19,9 @@
     "core/src/store.c": "be00b894365ce9ec771ba0762d0bff03da46127ab7247635a04fac936f0d3c98",
     "core/src/store.h": "ce79a51fff1d3cf9b31b62c3ff61398613abe3d30f6323b6253b2bc290aba8d1",
     "core/src/tables.h": "9754b4e09ccfb7c9861f26176065a708a2809f854ad10c524dc83fd7c289d6fe",
-    "core/src/ui.c": "d1985513b9400944d56fe5b9f9ae5628e1b90a68e136141a73508b41b4aaea79",
-    "core/src/ui.h": "37ea4acaf194e6992618475d05353b7f026ea5a99ea3aa6c0bfd156ae678273a"
+    "core/src/ui.c": "bea4c0e4db4ddca9b5c00b97266cc9243d0a68ecc98b93043dc4086c0b4665b4",
+    "core/src/ui.h": "c1038d24edfc3d740d5038d328bc853cc8cca2abc5cf7381b5bede0f6da1fdb2"
   },
   "source_state": "committed",
-  "source_note": "The mirrored files match the identified firmware commit. Version 1.0.0 includes two original shared FX banks (R/D and C/F, eight types each), independent part sends, v7 project migration, and matching SENDS/TYPES controls. Master output remains volume and limiter only. This is not a Roland algorithm emulation; physical sensing and pressure remain excluded. Eight melodic/six drum voices are retained with exact slice preparation and bounded arithmetic optimization."
+  "source_note": "The mirrored files match the identified firmware commit. Version 1.0.1 strengthens shared ROOM/HALL/PLATE reverb, starts new projects with ROOM2 sends 12/72/24/8, gives both built-in demos PART2 R/D 112, adds ENV-switched mixer LEVEL/PAN, and removes the lower duplicate NEXT indicator. Existing stored project values, v7 migration and eight melodic/six drum voices are retained. Master output remains volume and limiter only; physical sensing and pressure remain excluded. This is not a Roland algorithm emulation."
 }

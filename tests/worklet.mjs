@@ -118,3 +118,41 @@ assert(firstClick[0].some(sample=>sample!==0),'first callback contains the activ
 metroTap(interruptedMetro,13);
 assert.equal(metroAudio(interruptedMetro).energy,0,'REC OFF cuts an in-flight click without a stale tail');
 console.log(JSON.stringify({scenario:'AudioWorklet GLO METRO toggle, empty pattern/all-muted click only during PLAY+REC, ON/OFF save/reload and native parity',...metroResult,pass:true}));
+
+const mixer = new Processor({processorOptions:{wasmModule:compiled}});
+const mixerValues = parameter => Array.from({length:4}, (_,part)=>mixer.e.emu_parameter(part,parameter));
+metroTap(mixer,7); metroTurn(mixer,0,3);
+assert.equal(mixer.e.emu_state(2),5);
+const originalPan = mixerValues(13);
+for (const [knob,delta] of [-127,127,-77,1].entries()) metroTurn(mixer,knob+2,delta);
+const levels = [0,127,23,101];
+assert.deepEqual(mixerValues(12),levels,'mixer starts in LEVEL and all four knobs work with drums selected');
+assert.deepEqual(mixerValues(13),originalPan,'LEVEL leaves stored pans untouched');
+mixer.e.emu_frame();
+const levelFrame = new Uint16Array(mixer.e.memory.buffer,mixer.e.emu_fb_ptr(),240*240).slice();
+metroTap(mixer,4);
+assert.equal(mixer.e.emu_state(2),5,'ENV toggles the mixer without opening the envelope page');
+mixer.e.emu_frame();
+assert.notDeepEqual(new Uint16Array(mixer.e.memory.buffer,mixer.e.emu_fb_ptr(),240*240),levelFrame,'PAN changes the actual C framebuffer');
+metroTap(mixer,1);
+for (const [knob,delta] of [-127,22,127,-47].entries()) metroTurn(mixer,knob+2,delta);
+const pans = [0,64,127,17];
+assert.deepEqual(mixerValues(13),pans,'PAN controls all four parts, clamps at both ends and is not toggled by OCT+');
+assert.deepEqual(mixerValues(12),levels,'PAN leaves levels untouched');
+metroTap(mixer,4); metroTurn(mixer,2,1); levels[0]=1;
+assert.deepEqual(mixerValues(12),levels,'ENV returns to LEVEL');
+assert.deepEqual(mixerValues(13),pans,'returning to LEVEL preserves pans');
+metroTap(mixer,4);
+for (let page=0;page<5;page++) metroTap(mixer,7);
+metroTurn(mixer,2,1); levels[0]=2;
+assert.deepEqual(mixerValues(12),levels,'reentering the mixer resets to LEVEL');
+assert.deepEqual(mixerValues(13),pans);
+metroTap(mixer,9); metroTap(mixer,9);
+const mixerImage = new Uint8Array(mixer.e.memory.buffer,mixer.e.emu_flash_ptr(),mixer.e.emu_flash_size()).slice();
+assert.deepEqual(Array.from(latestRecord(mixerImage).slice(60,68)),[...levels,...pans],'v7 stores the edited levels and pans');
+const mixerReload = new Processor({processorOptions:{wasmModule:compiled,flashImage:mixerImage.buffer}});
+for (let part=0;part<4;part++) {
+    assert.equal(mixerReload.e.emu_parameter(part,12),levels[part],'saved level survives actual worklet reboot');
+    assert.equal(mixerReload.e.emu_parameter(part,13),pans[part],'saved pan survives actual worklet reboot');
+}
+console.log('PASS AudioWorklet ENV LEVEL/PAN toggle, all-part controls, OCT+ isolation, page reset and v7 persistence');

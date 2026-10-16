@@ -1,8 +1,15 @@
-# MC-1 web emulator 1.0.0
+# MC-1 web emulator 1.0.1
 
 An FM-1 faceplate emulator running the original MC-1 C DSP, sequencer, UI and A/B project storage in an AudioWorklet. Adapted from [dspaudio/orbit-web-emu](https://github.com/dspaudio/orbit-web-emu).
 
 Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector. Browser flash uses its own `mc1-emu-v1` IndexedDB database.
+
+## New in 1.0.1
+
+- Stronger shared ROOM/HALL/PLATE reverb; new projects use ROOM2 with R/D sends 12/72/24/8 and dry C/F sends. Both built-in demos use PART2 R/D send 112.
+- GLOBAL MIXER uses ENV to switch LEVEL/PAN; all four knobs control the four parts. OCT+ remains octave transpose.
+- Removed the lower duplicate NEXT indicator; the upper current/next pattern display remains.
+- Existing stored projects retain their values, v7 migration and eight melodic/six drum voices.
 
 ## New in 1.0.0
 
@@ -143,8 +150,8 @@ REC enabled, the generated notes are recorded into the pattern, including tied
 steps for longer gates. The arpeggiator is available on the three melodic parts.
 
 GLO cycles through GLOBAL MIXER, GROOVE CONTROL, DEMO LIBRARY, KNOB AUTOMATION and MIDI I/O. In the mixer,
-the four knobs adjust PART 1, PART 2, PART 3 and DRUM levels independently.
-SELECT chooses a part and ARP mutes it; the mixer displays level and mute state.
+ENV switches LEVEL and PAN; the four knobs adjust PART 1, PART 2, PART 3 and DRUMS independently. PAN runs from 0 (left) through 64 (center) to 127 (right). Entering the mixer starts in LEVEL.
+SELECT chooses a part and ARP mutes it; the mixer displays the selected values and mute state.
 The mixer reminder reads `SELECT-ARP to mute`.
 
 To record knob automation, enable PLAY and REC, then turn sound, mixer or effect
@@ -160,10 +167,11 @@ original parameters removes the marker. The name and marker survive save/load.
 Older custom patches with no recoverable preset name display IMPORTED SOUND.
 HOME shows pitch marks inside melodic steps so phrase changes remain visible
 even when their rhythms match. Above the knobs, PATTERN shows the current pattern
-and NEXT shows a queued change until the bar boundary. Status messages take priority.
+while the upper current/next display shows a queued change until the bar boundary. Status messages take priority.
 Orange marks selections. Bright green marks sounding steps and enabled ARP/LATCH
-states; rests and muted tracks do not show a green hit. PLAY and the sixteen
-white-key step LEDs also use bright green.
+states; rests and muted tracks do not show a green hit. PLAY stays steadily
+green during playback, without beat-synchronized blinking. The sixteen white
+key LEDs show sequencer steps in bright green.
 
 OCT− / OCT+ transpose the melodic keyboard by one octave, up to three octaves
 in either direction. The corresponding button lights below or above the default

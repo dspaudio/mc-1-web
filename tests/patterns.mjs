@@ -38,7 +38,7 @@ for (let pattern = 0; pattern < 64; pattern++) {
 assert.equal(step(record, 63, 0, 0)[0], 60, 'live REC stores the played note in pattern 64');
 assert.equal(step(record, 63, 3, 15)[7] & 128, 128, 'pattern 64 retains drum lane 16 at its last step');
 assert.deepEqual(events(record).map(event => [event[0], event[1], event[2]]), [[315, 0, 4], [318, 0, 40]], '16-bit addresses preserve pattern 64 automation on melodic and drum tracks');
-assert.equal(events(record)[1][3], 41);
+assert.equal(events(record)[1][3], 49);
 const restored = boot(image); restored.emu_enc(1, 63); tap(restored, 12);
 let audioHash = 2166136261, energy = 0;
 for (let block = 0; block < 256; block++) {
@@ -51,7 +51,7 @@ for (let block = 0; block < 256; block++) {
     }
 }
 assert(energy > 0.1); assert.equal(audioHash, native.pattern64Hash);
-assert.equal(restored.emu_parameter(3, 40), 41, 'high-address drum-track send automation replays after reload');
+assert.equal(restored.emu_parameter(3, 40), 49, 'high-address drum-track send automation replays after reload');
 tap(restored, 12); const reserialized = latestRecord(save(restored));
 assert.deepEqual(reserialized.slice(20), record.slice(20), 'all project data survives v6 save, reboot, replay and resave');
 

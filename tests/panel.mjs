@@ -269,6 +269,7 @@ const fx = boot();
 tap(fx, 'FX');
 const trackFx = Array.from({ length: 4 }, (_, part) => Array.from({ length: 2 }, (_, knob) => (part + 1) * 10 + knob));
 for (let part = 0; part < 4; part++) {
+    fx.emu_enc(2, -127); fx.emu_enc(3, -127);
     for (let knob = 0; knob < 2; knob++) fx.emu_enc(knob + 2, trackFx[part][knob]);
     fx.emu_enc(4, 100); fx.emu_enc(5, 100);
     fx.emu_enc(0, 1);

@@ -54,7 +54,7 @@ const region = (pixels, x, y, width, height) => Array.from({ length: height }, (
 const effects = boot();
 for (let scope = 0; scope < 4; scope++) {
     fxPage(effects, scope);
-    for (let knob = 0; knob < 2; knob++) effects.emu_enc(knob + 2, 30 + scope + knob);
+    for (let knob = 0; knob < 2; knob++) effects.emu_enc(knob + 2, 30 + scope + knob - effects.emu_parameter(scope, 40 + knob));
     effects.emu_enc(4, 100); effects.emu_enc(5, 100);
     tap(effects, 'ENV');
     for (let knob = 0; knob < 2; knob++) {
