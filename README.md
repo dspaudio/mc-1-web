@@ -1,8 +1,19 @@
-# MC-1 web emulator 1.0.1
+# MC-1 web emulator 1.1.0
 
 An FM-1 faceplate emulator running the original MC-1 C DSP, sequencer, UI and A/B project storage in an AudioWorklet. Adapted from [dspaudio/orbit-web-emu](https://github.com/dspaudio/orbit-web-emu).
 
 Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector. Browser flash uses its own `mc1-emu-v1` IndexedDB database.
+
+## New in 1.1.0
+
+- Four shared eight-type FX banks: R/D1, C/F1, R/D2 and C/F2, with four independent sends per part. All four knobs work on SENDS and TYPES; ENV switches pages.
+- GLO adds ANALOG after MIDI. Knob 1 sets independent melodic-part Analog variance (0-127, zero off); drums are excluded.
+- White 6x9 small text, flowing green underlines beneath populated playback rows, and the current shared panel LED behavior: menu/OCT lights, 2 Hz selected-menu blinking and tempo-driven PLAY pulses. HOME stays lit during playback.
+- Refreshed PCM-forward demos, current mono/legato behavior and MIDI control routing from the authoritative C core; eight melodic and six drum voices remain unchanged.
+- Project format v8 retains both 36 KiB A/B banks and imports earlier formats, including v7. Existing sends/types survive; new sends and Analog start at zero on older projects. SAVE upgrades to v8; older firmware cannot read v8. The IndexedDB name and storage key are unchanged.
+- MC-1 1.1.0 hardware supports dual-core synthesis/FX processing. The browser uses the same synthesis/UI semantics in one AudioWorklet, not a physical second CPU; WL82 CPU1 timing, timeout and failure behavior are not emulated. Host speed does not establish device deadlines.
+
+`CORE.json` pins the public 1.1.0 firmware source commit `d65898a7bb76e8bbe8a5cb355f56074a120c5b09`. All 21 mirrored file hashes were independently checked against that commit. `source_base_commit` records only the historical checkout base; the committed pin and rebuilt `build-info.json` identify this emulator's source.
 
 ## New in 1.0.1
 
@@ -117,12 +128,12 @@ and the 128-sound and 64-pattern lists three times faster; tempo moves six times
 turns, direction changes and switching controls return to one step. Short lists,
 including parts and drum kits, always move one choice per step.
 
-Effects use two global shared banks, R/D (reverb/delay) and C/F (chorus/flanger).
-HOME then FX opens FX SENDS for the selected part, including DRUMS: knob 1 is
-R/D SEND and knob 2 is C/F SEND, 0–127, with zero dry. Each of the four parts has
-its own two sends. ENV switches SENDS and TYPES. FX TYPES is global: knob 1 is
-R/D TYPE and knob 2 is C/F TYPE, clamped to 0–7. Knobs 3 and 4 do nothing on
-either page. The master has volume and limiter only.
+Effects use four global shared banks: R/D1, C/F1, R/D2 and C/F2.
+HOME then FX opens FX SENDS for the selected part, including DRUMS. Knobs
+1-4 adjust the four independent sends in that order, from 0-127 (zero dry).
+ENV switches SENDS and TYPES. FX TYPES uses the same four knobs to select
+each global bank type, clamped to 0-7. Both R/D banks share the R/D choices
+below; both C/F banks share the C/F choices. The master has volume and limiter only.
 
 | # | R/D | C/F |
 |---|---|---|
@@ -136,9 +147,10 @@ either page. The master has volume and limiter only.
 | 7 | PANNING DLY | FB SHORT DLY |
 
 These are original fixed-point approximations, not Roland algorithm emulation.
-Format v7 saves the sends and bank types. Older projects are migrated on load:
+Format v8 saves all four sends/types and Analog settings. Older projects are migrated on load:
 R/D send takes the larger old delay or reverb amount, C/F send takes the old
-modulation amount, and bank types map from the first part using that effect.
+modulation amount, and bank types map from the first part using that effect. Versions before v8
+start with dry R/D2/C/F2 sends and Analog off; existing v7 sends/types remain.
 
 Outside the mixer, ARP opens the selected melodic part's arpeggiator page;
 press ARP again to return HOME. Knobs 1–4 select MODE, RATE, OCT and GATE.
@@ -149,7 +161,9 @@ LATCH releases the current held notes; press keys again to play. With PLAY and
 REC enabled, the generated notes are recorded into the pattern, including tied
 steps for longer gates. The arpeggiator is available on the three melodic parts.
 
-GLO cycles through GLOBAL MIXER, GROOVE CONTROL, DEMO LIBRARY, KNOB AUTOMATION and MIDI I/O. In the mixer,
+GLO cycles through GLOBAL MIXER, GROOVE CONTROL, DEMO LIBRARY, KNOB AUTOMATION, MIDI I/O and ANALOG.
+On ANALOG, SELECT chooses a melodic part and knob 1 adjusts its variance from
+0-127; zero disables it. The other three knobs and the drum part are inactive. In the mixer,
 ENV switches LEVEL and PAN; the four knobs adjust PART 1, PART 2, PART 3 and DRUMS independently. PAN runs from 0 (left) through 64 (center) to 127 (right). Entering the mixer starts in LEVEL.
 SELECT chooses a part and ARP mutes it; the mixer displays the selected values and mute state.
 The mixer reminder reads `SELECT-ARP to mute`.
@@ -168,16 +182,24 @@ Older custom patches with no recoverable preset name display IMPORTED SOUND.
 HOME shows pitch marks inside melodic steps so phrase changes remain visible
 even when their rhythms match. Above the knobs, PATTERN shows the current pattern
 while the upper current/next display shows a queued change until the bar boundary. Status messages take priority.
-Orange marks selections. Bright green marks sounding steps and enabled ARP/LATCH
-states; rests and muted tracks do not show a green hit. PLAY stays steadily
-green during playback, without beat-synchronized blinking. The sixteen white
+Orange marks selections. Flowing bright green underlines follow playback below
+populated melodic tracks and drum rows; empty or muted rows have no underline.
+Bright green also marks enabled ARP/LATCH states. PLAY pulses green
+at the sequencer tempo; selected menus blink at 2 Hz. Menu and OCT buttons are
+lit, with HOME steady during playback. The sixteen white
 key LEDs show sequencer steps in bright green.
 
 OCT− / OCT+ transpose the melodic keyboard by one octave, up to three octaves
-in either direction. The corresponding button lights below or above the default
-octave. During playback, the sixteen white keys show the sixteen sequencer steps.
+in either direction. Both buttons remain lit. Hold OCT− and use the first four
+black keys to select a bank, then a white key to select one of its 16 patterns.
+During playback, the sixteen white keys show the sixteen sequencer steps.
 
 Build with clang/LLD (wasm32), Python 3 and Node: `python3 tools/check_core.py && python3 tools/build.py`. Serve `build/` over HTTPS or localhost. The workflow performs native/WASM audio parity and AudioWorklet input/storage checks, MIDI port lifecycle tests and actual-worklet song/MIDI parity, then deploys GitHub Pages. `tests/native_midi.c` produces `build/midi-native.json` for `node tests/midi-worklet.mjs`; `node tests/midi.mjs` runs permission, hotplug, disconnect and queue scenarios without a browser. Build provenance lives in CORE.json and generated build-info.json.
+
+On macOS, Apple's system clang may lack wasm32. With an existing Homebrew LLVM,
+use `PATH=/opt/homebrew/opt/llvm/bin:$PATH CLANG=/opt/homebrew/opt/llvm/bin/clang python3 tools/build.py`.
+For local production use, run `python3 -m http.server 8093 --bind 127.0.0.1 --directory build`
+and open `http://127.0.0.1:8093/`.
 
 POWER ON stays available if audio startup fails, displays the failure, and allows
 a retry. Startup must receive the AudioWorklet ready response within ten seconds.
@@ -188,8 +210,11 @@ All 64 recorded instrument presets are checked for native/WASM PCM parity
 before and after saving and reloading.
 Timestamped control tests also check acceleration, popup selection and the
 500 ms deadline through both the C UI and real AudioWorklet message handling.
-Performance tests cover effect types and filters, ARP recording, automation
-capacity/replay/clearing, preset-name preservation and v6 save/load.
+Performance tests cover all four FX banks, Analog, ARP recording, automation
+capacity/replay/clearing, preset-name preservation and v8 save/load.
+Native/WASM PCM comparison covers all 32 bank/type choices with Analog enabled.
+Actual-worklet tests also verify v7 import without writes, explicit A/B upgrade
+to v8 and all four banks' wire-format fields.
 These checks do not establish browser rendering or physical-device behavior.
 
 Browser behavior is not FM-1 hardware verification. CPU timing, physical I/O, bootloader, calibration, physical USB/TRS/BLE transports and real flash are not emulated. Web MIDI routes OS ports to the C MIDI engine; it does not validate FM-1 hardware MIDI or USB Audio. Hardware installation remains unverified. Browser saved data may be cleared by browser settings.
@@ -464,7 +489,7 @@ Select DRUMS with SELECT, then turn PRESETS to choose a kit. ALGORITHM continues
 to choose patterns. Kits share the sixteen lane roles below, so a pattern can be
 played with any kit. Projects saved by older MC-1 versions load with BASE 808,
 dry track effects and their original master effects; saving upgrades the project
-to format v7.
+to format v8.
 
 | # | Kit name | Synthesis character |
 |---|---|---|

@@ -6,6 +6,7 @@
 #include "mcfm.h"
 #include "ui.h"
 #include "store.h"
+#include "../core/firmware/panel_modes.h"
 #include <stdint.h>
 #ifdef __wasm__
 #define API(n) __attribute__((export_name(n), used))
@@ -18,7 +19,7 @@ static uint16_t fb[240*240];
 static int16_t pcm[1024];
 static float audio[1024];
 static uint8_t flash[MC_STORE_END-MC_STORE_A],leds[11],dims[11],held_part[27],held_note[27];
-static uint32_t flash_gen,fb_gen,notes,buttons;
+static uint32_t flash_gen,fb_gen,notes,buttons,ui_time;
 static int master=1023;
 static const uint8_t step_keys[MC_STEPS]={0,2,4,6,7,9,11,12,14,16,18,19,21,23,24,26};
 static const int8_t matrix[6][11]={
@@ -41,13 +42,15 @@ API("emu_frame") void emu_frame(void){
  engine.master=(uint32_t)((uint64_t)(unsigned)master*(unsigned)master*MC_MASTER_MAX/(1023u*1023u));
  service();
  mc_ui_prepare_frame(&engine,&ui);
- for(unsigned y=0;y<240;y+=8)mc_ui_strip(&engine,&ui,y,8,fb+y*240);
+ McUiFrame frame;mc_ui_capture_frame(&engine,&frame);
+ for(unsigned y=0;y<240;y+=8)mc_ui_strip_frame(&engine,&ui,&frame,y,8,fb+y*240);
+ unsigned modes=mc_panel_led_mask(&engine,&ui,ui_time);
  for(unsigned c=0;c<11;c++){leds[c]=dims[c]=0;for(unsigned r=1;r<5;r++){
- int key=matrix[r][c];int on=(key==0&&ui.octave<0)||(key==1&&ui.octave>0)||(key==12&&engine.playing)||(key==13&&engine.recording)||(engine.playing&&key==14+step_keys[engine.step])||(key>=14&&((notes>>(key-14))&1u));
+ int key=matrix[r][c];int on=(key>=0&&key<14&&((modes>>key)&1u))||(engine.playing&&key==14+step_keys[engine.step])||(key>=14&&((notes>>(key-14))&1u));
  if(on)leds[c]|=(uint8_t)(1u<<r);
  }}fb_gen++;
 }
-API("emu_init") void emu_init(void){mc_init(&engine);mc_ui_init(&ui);notes=buttons=0;uint32_t seq;(void)mc_store_load(&storage,&engine.project,&seq);emu_frame();}
+API("emu_init") void emu_init(void){mc_init(&engine);mc_ui_init(&ui);notes=buttons=ui_time=0;uint32_t seq;(void)mc_store_load(&storage,&engine.project,&seq);emu_frame();}
 API("emu_start") void emu_start(void){emu_frame();}
 API("emu_render") void emu_render(unsigned n){if(n>512)n=512;mc_render(&engine,pcm,n);for(unsigned i=0;i<n*2;i++)audio[i]=(float)pcm[i]/32768.0f;}
 API("emu_input") void emu_input(uint32_t nn,uint32_t bb){
@@ -61,7 +64,7 @@ API("emu_input") void emu_input(uint32_t nn,uint32_t bb){
 }
 API("emu_enc") void emu_enc(unsigned e,int step){static const uint8_t map[7]={0,1,3,4,5,6,2};if(e<7)mc_ui_encoder(&engine,&ui,map[e],step);service();}
 API("emu_enc_at") void emu_enc_at(unsigned e,int step,uint32_t now_ms){static const uint8_t map[7]={0,1,3,4,5,6,2};if(e<7)mc_ui_encoder_at(&engine,&ui,map[e],step,now_ms);service();}
-API("emu_ui_tick") void emu_ui_tick(uint32_t now_ms){mc_ui_tick(&ui,now_ms);}
+API("emu_ui_tick") void emu_ui_tick(uint32_t now_ms){ui_time=now_ms;mc_ui_tick(&ui,now_ms);}
 API("emu_adc_set") void emu_adc_set(unsigned ch,int v){if(ch==4)master=v<0?0:v>1023?1023:v;}
 API("emu_fb_ptr") uintptr_t emu_fb_ptr(void){return (uintptr_t)fb;}
 API("emu_fb_gen") uint32_t emu_fb_gen(void){return fb_gen;}

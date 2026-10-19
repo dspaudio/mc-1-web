@@ -51,41 +51,56 @@ function fxPage(e, scope) {
 const frame = e => { e.emu_frame(); return new Uint16Array(e.memory.buffer, e.emu_fb_ptr(), 240 * 240).slice(); };
 const region = (pixels, x, y, width, height) => Array.from({ length: height }, (_, row) => Array.from(pixels.slice((y + row) * 240 + x, (y + row) * 240 + x + width))).flat();
 
+const sendParams = [40, 41, 44, 45], typeParams = [42, 43, 46, 47];
 const effects = boot();
 for (let scope = 0; scope < 4; scope++) {
     fxPage(effects, scope);
-    for (let knob = 0; knob < 2; knob++) effects.emu_enc(knob + 2, 30 + scope + knob - effects.emu_parameter(scope, 40 + knob));
-    effects.emu_enc(4, 100); effects.emu_enc(5, 100);
+    for (let knob = 0; knob < 4; knob++) effects.emu_enc(knob + 2, 30 + scope + knob - effects.emu_parameter(scope, sendParams[knob]));
     tap(effects, 'ENV');
-    for (let knob = 0; knob < 2; knob++) {
+    for (let knob = 0; knob < 4; knob++) {
         for (let type = 0; type < 8; type++) {
-            effects.emu_enc_at(knob + 2, type - effects.emu_parameter(4, 42 + knob), 1000 + type);
-            assert.equal(effects.emu_parameter(4, 42 + knob), type, 'all eight global FX choices are reachable without acceleration');
-            for (let part = 0; part < 4; part++) assert.equal(effects.emu_parameter(part, 42 + knob), type);
+            effects.emu_enc_at(knob + 2, type - effects.emu_parameter(4, typeParams[knob]), 1000 + type);
+            assert.equal(effects.emu_parameter(4, typeParams[knob]), type, 'each global bank exposes all eight choices without acceleration');
+            for (let part = 0; part < 4; part++) assert.equal(effects.emu_parameter(part, typeParams[knob]), type);
         }
-        effects.emu_enc_at(knob + 2, 1, 1010); assert.equal(effects.emu_parameter(4, 42 + knob), 7);
-        effects.emu_enc(knob + 2, -100); assert.equal(effects.emu_parameter(4, 42 + knob), 0);
-        effects.emu_enc(knob + 2, 6 + knob);
+        effects.emu_enc_at(knob + 2, 1, 1010); assert.equal(effects.emu_parameter(4, typeParams[knob]), 7);
+        effects.emu_enc(knob + 2, -100); assert.equal(effects.emu_parameter(4, typeParams[knob]), 0);
+        effects.emu_enc(knob + 2, 4 + knob);
     }
-    const types = [effects.emu_parameter(4, 42), effects.emu_parameter(4, 43)];
-    effects.emu_enc(4, 100); effects.emu_enc(5, 100);
-    assert.deepEqual([effects.emu_parameter(4, 42), effects.emu_parameter(4, 43)], types);
 }
-for (let scope = 0; scope < 4; scope++) {
-    for (let knob = 0; knob < 2; knob++)
-        assert.equal(effects.emu_parameter(scope, 40 + knob), 30 + scope + knob, 'both send amounts remain independent on all four parts');
-}
+for (let scope = 0; scope < 4; scope++) for (let knob = 0; knob < 4; knob++)
+    assert.equal(effects.emu_parameter(scope, sendParams[knob]), 30 + scope + knob, 'all sixteen sends remain independent');
 for (let parameter = 14; parameter <= 23; parameter++) assert.equal(effects.emu_parameter(4, parameter), -1, 'legacy master FX scope is inactive');
 const legacyMaster = effects.emu_state(5);
 fxPage(effects, 0); tap(effects, 'FX'); effects.emu_enc(2, 7);
 assert.equal(effects.emu_parameter(0, 40), 37, 'FX again keeps editing the selected part send');
-assert.equal(effects.emu_state(5), legacyMaster, 'legacy master data is not a live control');
+assert.equal(effects.emu_state(5), legacyMaster);
 const effectsSave = save(effects);
 const restoredEffects = boot(effectsSave.image);
-for (let scope = 0; scope < 4; scope++) for (let parameter = 40; parameter <= 43; parameter++) {
-    assert.equal(restoredEffects.emu_parameter(scope, parameter), effects.emu_parameter(scope, parameter), 'part sends and shared types survive v7 reload');
+for (let scope = 0; scope < 4; scope++) for (const parameter of [...sendParams, ...typeParams])
+    assert.equal(restoredEffects.emu_parameter(scope, parameter), effects.emu_parameter(scope, parameter), 'all four sends and bank types survive v8 reload');
+console.log(JSON.stringify({ scenario: 'sixteen independent sends, four eight-type banks and v8 save/reload', pass: true }));
+
+const analog = boot();
+for (let part = 0; part < 3; part++) {
+    select(analog, part); tap(analog, 'HOME');
+    for (let page = 0; page < 6; page++) tap(analog, 'GLO');
+    assert.equal(analog.emu_state(2), 10);
+    analog.emu_enc(2, 30 + part * 20);
+    for (let knob = 3; knob < 6; knob++) analog.emu_enc(knob, 127);
+    assert.equal(analog.emu_parameter(part, 48), 30 + part * 20, 'only knob 1 adjusts the selected melodic part');
 }
-console.log(JSON.stringify({ scenario: 'four independent two-bank sends, 8+8 global types, unused knobs and v7 save/reload', pass: true }));
+select(analog, 3); analog.emu_enc(2, 127); assert.equal(analog.emu_parameter(3, 48), -1);
+const analogReload = boot(save(analog).image);
+for (let part = 0; part < 3; part++) assert.equal(analogReload.emu_parameter(part, 48), 30 + part * 20);
+const analogAudio = [];
+for (const amount of [0, 0, 100, 100]) {
+    const e = boot(); tap(e, 'HOME'); for (let page = 0; page < 6; page++) tap(e, 'GLO');
+    e.emu_enc(2, amount); e.emu_input(1 << 7, 0); analogAudio.push(render(e, 44100).hash);
+}
+assert.equal(analogAudio[0], analogAudio[1]); assert.equal(analogAudio[2], analogAudio[3]);
+assert.notEqual(analogAudio[0], analogAudio[2], 'Analog changes actual PCM deterministically');
+console.log(JSON.stringify({ scenario: 'Analog GLO page, per-part controls, drum exclusion, v8 reload and audible deterministic variance', pass: true }));
 
 const arpAudio = [];
 for (let mode = 0; mode < 6; mode++) {

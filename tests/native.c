@@ -80,6 +80,20 @@ static uint32_t metronome_hash(void){
     }
     assert(energy>0);return hash;
 }
+static void four_bank_hashes(void){
+    static const unsigned send[4]={MC_PARAM_RD_SEND,MC_PARAM_CF_SEND,MC_PARAM_RD2_SEND,MC_PARAM_CF2_SEND};
+    static const unsigned type[4]={MC_PARAM_RD_TYPE,MC_PARAM_CF_TYPE,MC_PARAM_RD2_TYPE,MC_PARAM_CF2_TYPE};
+    _Static_assert(MC_VOICES==8&&MC_DRUM_VOICES==6,"Keep approved polyphony");
+    for(unsigned bank=0;bank<4;bank++)for(unsigned choice=0;choice<8;choice++){
+        for(unsigned i=0;i<sizeof flash;i++)flash[i]=255;
+        emu_init();tap(2);
+        for(unsigned knob=0;knob<4;knob++)emu_enc(knob+2,(knob==bank?100:0)-mc_parameter_get(&engine,0,send[knob]));
+        tap(4);emu_enc(bank+2,(int)choice-mc_parameter_get(&engine,4,type[bank]));
+        tap(8);for(unsigned page=0;page<6;page++)tap(7);emu_enc(2,64);
+        uint32_t hash=melody_hash();
+        printf("%s%u",bank||choice?",":"",hash);
+    }
+}
 int main(void){storage_bounds();emu_init();tap(7);tap(7);tap(7);assert(emu_state(2)==4);emu_enc(5,1);assert(emu_state(3)==1);tap(12);uint32_t hash=2166136261u;
 for(unsigned b=0;b<(60u*44100+127)/128;b++){emu_render(128);for(unsigned i=0;i<256;i++){uint16_t x=(uint16_t)pcm[i];hash=(hash^(x&255))*16777619u;hash=(hash^(x>>8))*16777619u;}}
 printf("{\"audioHash\":%u,\"recordedPresets\":[",hash);
@@ -107,4 +121,5 @@ for(unsigned preset=0;preset<MC_PRESETS;preset++){
 }
 assert(count==64);
 uint32_t record_hash=0,pattern_hash=patterns_hash(&record_hash);
-printf("],\"pattern64Hash\":%u,\"patternRecordHash\":%u,\"metronomeHash\":%u}\n",pattern_hash,record_hash,metronome_hash());return 0;}
+printf("],\"pattern64Hash\":%u,\"patternRecordHash\":%u,\"metronomeHash\":%u,\"fourBankHashes\":[",pattern_hash,record_hash,metronome_hash());
+four_bank_hashes();printf("]}\n");return 0;}

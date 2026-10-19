@@ -143,7 +143,7 @@ metroTap(mixer,4); metroTurn(mixer,2,1); levels[0]=1;
 assert.deepEqual(mixerValues(12),levels,'ENV returns to LEVEL');
 assert.deepEqual(mixerValues(13),pans,'returning to LEVEL preserves pans');
 metroTap(mixer,4);
-for (let page=0;page<5;page++) metroTap(mixer,7);
+for (let page=0;page<6;page++) metroTap(mixer,7);
 metroTurn(mixer,2,1); levels[0]=2;
 assert.deepEqual(mixerValues(12),levels,'reentering the mixer resets to LEVEL');
 assert.deepEqual(mixerValues(13),pans);
@@ -156,3 +156,59 @@ for (let part=0;part<4;part++) {
     assert.equal(mixerReload.e.emu_parameter(part,13),pans[part],'saved pan survives actual worklet reboot');
 }
 console.log('PASS AudioWorklet ENV LEVEL/PAN toggle, all-part controls, OCT+ isolation, page reset and v7 persistence');
+
+const four = new Processor({processorOptions:{wasmModule:compiled}});
+const sends = [40,41,44,45], types = [42,43,46,47];
+for (let part=0;part<4;part++) {
+    metroTurn(four,0,part-four.e.emu_state(1)); metroTap(four,8); metroTap(four,2);
+    for (let knob=0;knob<4;knob++) metroTurn(four,knob+2,20+part+knob-four.e.emu_parameter(part,sends[knob]));
+}
+metroTap(four,4);
+for (let knob=0;knob<4;knob++) metroTurn(four,knob+2,4+knob-four.e.emu_parameter(4,types[knob]));
+metroTurn(four,0,-3); metroTap(four,8);
+for (let page=0;page<6;page++) metroTap(four,7);
+assert.equal(four.e.emu_state(2),10);
+metroTurn(four,2,51); metroTap(four,9); metroTap(four,9);
+const fourImage=new Uint8Array(four.e.memory.buffer,four.e.emu_flash_ptr(),four.e.emu_flash_size()).slice();
+const fourRecord=latestRecord(fourImage);
+assert.deepEqual(Array.from(fourRecord.slice(FORMAT.extraSendOffset,FORMAT.extraSendOffset+8)),[22,23,23,24,24,25,25,26]);
+assert.deepEqual(Array.from(fourRecord.slice(FORMAT.extraTypeOffset,FORMAT.extraTypeOffset+2)),[6,7]);
+assert.deepEqual(Array.from(fourRecord.slice(FORMAT.analogOffset,FORMAT.analogOffset+3)),[51,0,0]);
+const fourReload=new Processor({processorOptions:{wasmModule:compiled,flashImage:fourImage.buffer}});
+assert.equal(fourReload.e.emu_flash_gen(),0,'loading v8 does not write flash');
+for (let part=0;part<4;part++) for (let knob=0;knob<4;knob++) {
+    assert.equal(fourReload.e.emu_parameter(part,sends[knob]),20+part+knob);
+    assert.equal(fourReload.e.emu_parameter(part,types[knob]),4+knob);
+}
+assert.equal(fourReload.e.emu_parameter(0,48),51);
+
+// A valid v7 writer has the identical prefix and CRCs, without the 13 v8 bytes.
+function crc(bytes) {
+    let c=0xffffffff;
+    for (const byte of bytes) {
+        c^=byte;
+        for (let bit=0;bit<8;bit++) c=(c>>>1)^(0xedb88320* (c&1));
+    }
+    return (~c)>>>0;
+}
+const v7Image=new Uint8Array(73728).fill(255), v7=fourRecord.slice(0,35124);
+const v7View=new DataView(v7.buffer);
+v7[4]=7; v7View.setUint16(6,35104,true);
+v7View.setUint32(12,crc(v7.subarray(20)),true);
+v7View.setUint32(16,crc(v7.subarray(0,16)),true); v7Image.set(v7);
+const migrated=new Processor({processorOptions:{wasmModule:compiled,flashImage:v7Image.buffer}});
+assert.equal(migrated.e.emu_flash_gen(),0,'v7 import does not rewrite or clear stored banks');
+assert.deepEqual(new Uint8Array(migrated.e.memory.buffer,migrated.e.emu_flash_ptr(),73728),v7Image);
+for (let part=0;part<4;part++) {
+    assert.equal(migrated.e.emu_parameter(part,40),20+part);
+    assert.equal(migrated.e.emu_parameter(part,41),21+part);
+    assert.equal(migrated.e.emu_parameter(part,44),0);
+    assert.equal(migrated.e.emu_parameter(part,45),0);
+    if (part<3) assert.equal(migrated.e.emu_parameter(part,48),0);
+}
+assert.equal(migrated.e.emu_parameter(4,42),4); assert.equal(migrated.e.emu_parameter(4,43),5);
+metroTap(migrated,9); metroTap(migrated,9);
+const migratedImage=new Uint8Array(migrated.e.memory.buffer,migrated.e.emu_flash_ptr(),73728).slice();
+assert.deepEqual(latestRecord(migratedImage).slice(20,35124),v7.slice(20),'explicit SAVE upgrades v7 without changing the old payload');
+assert.deepEqual(migratedImage.slice(0,35124),v7,'upgrade commits the other A/B bank');
+console.log('PASS AudioWorklet four-bank/Analog v8 wire format, reboot and non-destructive v7 import/explicit upgrade');
