@@ -12,6 +12,8 @@ for p in out.glob('*.fwsc'):p.unlink()
 for n in ['index.html','emu.js','worklet.js','midi.js']:shutil.copy(r/'site'/n,out/n)
 shutil.copy(r/'core/LICENSES/CC0-VSCO.txt',out/'samples-LICENSE.txt')
 shutil.copy(r/'core/assets/recorded/manifest.json',out/'recorded-samples.json')
+shutil.copy(r/'core/LICENSES/CC0-Meta.txt',out/'samples-Meta-LICENSE.txt')
+shutil.copy(r/'core/assets/hybrid/manifest.json',out/'hybrid-samples.json')
 shutil.copy(r/'LICENSE',out/'LICENSE.txt')
 shutil.copy(r/'NOTICE.md',out/'NOTICE.md')
 info={'product':'MC-1','version':(r/'VERSION').read_text().strip(),'core':json.loads((r/'CORE.json').read_text()),'wasm_sha256':hashlib.sha256((out/'mc1.wasm').read_bytes()).hexdigest(),'wasm_bytes':(out/'mc1.wasm').stat().st_size}

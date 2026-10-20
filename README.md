@@ -1,8 +1,17 @@
-# MC-1 web emulator 1.1.0
+# MC-1 web emulator 1.2.0
+
+**Rebuilt LA-PCM engine. All 112 LA sounds replaced.**
 
 An FM-1 faceplate emulator running the original MC-1 C DSP, sequencer, UI and A/B project storage in an AudioWorklet. Adapted from [dspaudio/orbit-web-emu](https://github.com/dspaudio/orbit-web-emu).
 
 Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector. Browser flash uses its own `mc1-emu-v1` IndexedDB database.
+
+## New in 1.2.0
+
+- Replaced all 112 LA patch definitions, including the 48 formerly mathematical patches, with real recorded attacks and source-derived synthesized harmonic sustain. The 128 names, symbolic IDs and category positions are retained. Earlier LA audio is historical, not bit-identical to this bank.
+- 24 zones cover 17 CC0-1.0 instrument families: six Meta Open Sound piano zones, three Meta nylon-guitar zones and 15 VSCO 2 Community Edition families. Each LA sound combines a real attack with two same-phase spectral sustain frames, not a generic saw/square blend. Plucked sources keep natural decay; organ, strings and winds keep held sustain. PCM mix controls attack contribution; it no longer selects a sample-only sustained loop.
+- The 16 original Acid patch definitions and all eight synthesized drum kits are unchanged. Project format v8, A/B storage, four FX banks, Analog, eight melodic voices and six drum voices remain available. Current shared reverb and the bit-identical 32-sample attack cache optimization are mirrored from the validated firmware core. Browser checks do not establish device deadlines.
+- Current sample hashes and processing: [hybrid manifest](core/assets/hybrid/manifest.json). Retained licenses: [Meta](core/LICENSES/CC0-Meta.txt) and [VSCO](core/LICENSES/CC0-VSCO.txt); [NOTICE.md](NOTICE.md) distinguishes sample and code licensing.
 
 ## New in 1.1.0
 
@@ -13,7 +22,11 @@ Only MC-1 is included. No SLOOP, Felucca or ORBIT firmware binaries or selector.
 - Project format v8 retains both 36 KiB A/B banks and imports earlier formats, including v7. Existing sends/types survive; new sends and Analog start at zero on older projects. SAVE upgrades to v8; older firmware cannot read v8. The IndexedDB name and storage key are unchanged.
 - MC-1 1.1.0 hardware supports dual-core synthesis/FX processing. The browser uses the same synthesis/UI semantics in one AudioWorklet, not a physical second CPU; WL82 CPU1 timing, timeout and failure behavior are not emulated. Host speed does not establish device deadlines.
 
-`CORE.json` pins the public 1.1.0 firmware source commit `d65898a7bb76e8bbe8a5cb355f56074a120c5b09`. All 21 mirrored file hashes were independently checked against that commit. `source_base_commit` records only the historical checkout base; the committed pin and rebuilt `build-info.json` identify this emulator's source.
+`CORE.json` pins firmware commit `10a2240d7f3c63e3ed551774a8e17fb24ed002b8`.
+All 24 shared-file hashes match that source, including the hybrid audio bank,
+current manifest and retained licenses. `build-info.json` embeds the same
+provenance. The physical firmware passed its own real-device validation;
+browser speed is not hardware timing evidence.
 
 ## New in 1.0.1
 
@@ -206,7 +219,7 @@ a retry. Startup must receive the AudioWorklet ready response within ten seconds
 CI also checks startup failure/retry handling in Node, octave transposition,
 the sixteen white-key step LEDs, preset and kit selection boundaries, distinct
 kit audio, kit save/reboot, independent track effects and older project imports.
-All 64 recorded instrument presets are checked for native/WASM PCM parity
+All 112 source-backed LA presets across 17 families are checked for native/WASM PCM parity
 before and after saving and reloading.
 Timestamped control tests also check acceleration, popup selection and the
 500 ms deadline through both the C UI and real AudioWorklet message handling.
@@ -226,9 +239,7 @@ CC0-1.0, credited below. Not affiliated with Roland or M-VAVE.
 
 ## Complete factory preset list
 
-128 melodic presets: the previous 64 synthesis presets and 64 presets derived
-from real instrument recordings. The 24 synthesized PCM attack sources and
-eight drum kits with 16 lanes each remain available. The
+128 melodic presets: 112 source-backed LA hybrid PCM patches and 16 original Acid patches. The 17 source families cover 24 recorded zones; eight original synthesized drum kits with 16 lanes each are unchanged. Legacy PCM IDs remain accepted for saved patches. The
 [MC-505 factory patch list](https://cdn.roland.com/assets/media/pdf/MC505PTC.pdf)
 is a reference for a varied groovebox sound palette. No Roland samples or patch
 data are included.
@@ -254,18 +265,18 @@ data are included.
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 01 | LA-inspired | ROUND BASS | Bass | Original synthesis |
-| 02 | LA-inspired | DEEP CELL | Bass | Original synthesis |
-| 03 | LA-inspired | CLUB PULSE | Bass | Original synthesis |
-| 04 | LA-inspired | CLICK FLOOR | Bass | Original synthesis |
-| 05 | LA-inspired | WIRE PICK | Bass | Original synthesis |
-| 06 | LA-inspired | DUB CHAMBER | Bass | Original synthesis |
-| 07 | Recorded PCM (LA) | CONTRABASS ROOT | Bass | VSCO 2 CE: Contrabass |
-| 08 | Recorded PCM (LA) | CONTRABASS ROUND | Bass | VSCO 2 CE: Contrabass |
-| 09 | Recorded PCM (LA) | CONTRABASS SNAP | Bass | VSCO 2 CE: Contrabass |
-| 10 | Recorded PCM (LA) | CELLO LOW BOW | Bass | VSCO 2 CE: Cello section |
-| 11 | Recorded PCM (LA) | CELLO BASS PULSE | Bass | VSCO 2 CE: Cello section |
-| 12 | Recorded PCM (LA) | BASSOON ROOT | Bass | VSCO 2 CE: Bassoon |
+| 01 | LA hybrid PCM | ROUND BASS | Bass | VSCO 2 CE: Contrabass |
+| 02 | LA hybrid PCM | DEEP CELL | Bass | VSCO 2 CE: Cello section |
+| 03 | LA hybrid PCM | CLUB PULSE | Bass | VSCO 2 CE: Organ |
+| 04 | LA hybrid PCM | CLICK FLOOR | Bass | VSCO 2 CE: Xylophone |
+| 05 | LA hybrid PCM | WIRE PICK | Bass | Meta Open Sound: Nylon guitar |
+| 06 | LA hybrid PCM | DUB CHAMBER | Bass | VSCO 2 CE: Contrabass |
+| 07 | LA hybrid PCM | CONTRABASS ROOT | Bass | VSCO 2 CE: Contrabass |
+| 08 | LA hybrid PCM | CONTRABASS ROUND | Bass | VSCO 2 CE: Contrabass |
+| 09 | LA hybrid PCM | CONTRABASS SNAP | Bass | VSCO 2 CE: Contrabass |
+| 10 | LA hybrid PCM | CELLO LOW BOW | Bass | VSCO 2 CE: Cello section |
+| 11 | LA hybrid PCM | CELLO BASS PULSE | Bass | VSCO 2 CE: Cello section |
+| 12 | LA hybrid PCM | BASSOON ROOT | Bass | VSCO 2 CE: Bassoon |
 
 ### Acid (13–28)
 
@@ -292,196 +303,169 @@ data are included.
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 29 | LA-inspired | VECTOR LEAD | Lead | Original synthesis |
-| 30 | LA-inspired | WIDE SAW | Lead | Original synthesis |
-| 31 | LA-inspired | SOFT PIPE | Lead | Original synthesis |
-| 32 | LA-inspired | POLY CHROME | Poly synth | Original synthesis |
-| 33 | Recorded PCM (LA) | TRUMPET LEAD | Lead | VSCO 2 CE: Trumpet |
-| 34 | Recorded PCM (LA) | HORN SOLO | Lead | VSCO 2 CE: French horn |
-| 35 | Recorded PCM (LA) | FLUTE LEAD | Lead | VSCO 2 CE: Flute |
-| 36 | Recorded PCM (LA) | FLUTE SOFT ARC | Lead | VSCO 2 CE: Flute |
-| 37 | Recorded PCM (LA) | OBOE BRIGHT | Lead | VSCO 2 CE: Oboe |
-| 38 | Recorded PCM (LA) | OBOE SOLO | Lead | VSCO 2 CE: Oboe |
-| 39 | Recorded PCM (LA) | CLARINET ARC | Lead | VSCO 2 CE: Clarinet |
-| 40 | Recorded PCM (LA) | CLARINET BRIGHT | Lead | VSCO 2 CE: Clarinet |
+| 29 | LA hybrid PCM | VECTOR LEAD | Lead | VSCO 2 CE: Trumpet |
+| 30 | LA hybrid PCM | WIDE SAW | Lead | VSCO 2 CE: Solo violin |
+| 31 | LA hybrid PCM | SOFT PIPE | Lead | VSCO 2 CE: Flute |
+| 32 | LA hybrid PCM | POLY CHROME | Poly synth | VSCO 2 CE: Trumpet |
+| 33 | LA hybrid PCM | TRUMPET LEAD | Lead | VSCO 2 CE: Trumpet |
+| 34 | LA hybrid PCM | HORN SOLO | Lead | VSCO 2 CE: French horn |
+| 35 | LA hybrid PCM | FLUTE LEAD | Lead | VSCO 2 CE: Flute |
+| 36 | LA hybrid PCM | FLUTE SOFT ARC | Lead | VSCO 2 CE: Flute |
+| 37 | LA hybrid PCM | OBOE BRIGHT | Lead | VSCO 2 CE: Oboe |
+| 38 | LA hybrid PCM | OBOE SOLO | Lead | VSCO 2 CE: Oboe |
+| 39 | LA hybrid PCM | CLARINET ARC | Lead | VSCO 2 CE: Clarinet |
+| 40 | LA hybrid PCM | CLARINET BRIGHT | Lead | VSCO 2 CE: Clarinet |
 
 ### Sequence (41–50)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 41 | LA-inspired | SEQUENCE KEY | Sequence | Original synthesis |
-| 42 | LA-inspired | SPARK SEQ | Sequence | Original synthesis |
-| 43 | LA-inspired | RATCHET PLUCK | Sequence | Original synthesis |
-| 44 | Recorded PCM (LA) | PIANO STEPS | Sequence | VSCO 2 CE: Piano |
-| 45 | Recorded PCM (LA) | MARIMBA RUN | Sequence | VSCO 2 CE: Marimba |
-| 46 | Recorded PCM (LA) | GLOCK GRID | Sequence | VSCO 2 CE: Glockenspiel |
-| 47 | Recorded PCM (LA) | XYLO WALK | Sequence | VSCO 2 CE: Xylophone |
-| 48 | Recorded PCM (LA) | HARP PATTERN | Sequence | VSCO 2 CE: Harp |
-| 49 | Recorded PCM (LA) | CLARINET GATE | Sequence | VSCO 2 CE: Clarinet |
-| 50 | Recorded PCM (LA) | VIOLIN PULSE | Sequence | VSCO 2 CE: Solo violin |
+| 41 | LA hybrid PCM | SEQUENCE KEY | Sequence | Meta Open Sound: Piano |
+| 42 | LA hybrid PCM | SPARK SEQ | Sequence | VSCO 2 CE: Glockenspiel |
+| 43 | LA hybrid PCM | RATCHET PLUCK | Sequence | Meta Open Sound: Nylon guitar |
+| 44 | LA hybrid PCM | PIANO STEPS | Sequence | Meta Open Sound: Piano |
+| 45 | LA hybrid PCM | MARIMBA RUN | Sequence | VSCO 2 CE: Marimba |
+| 46 | LA hybrid PCM | GLOCK GRID | Sequence | VSCO 2 CE: Glockenspiel |
+| 47 | LA hybrid PCM | XYLO WALK | Sequence | VSCO 2 CE: Xylophone |
+| 48 | LA hybrid PCM | HARP PATTERN | Sequence | VSCO 2 CE: Harp |
+| 49 | LA hybrid PCM | CLARINET GATE | Sequence | VSCO 2 CE: Clarinet |
+| 50 | LA hybrid PCM | VIOLIN PULSE | Sequence | VSCO 2 CE: Solo violin |
 
 ### Keys (51–60)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 51 | LA-inspired | HAMMER KEY | Keys | Original synthesis |
-| 52 | LA-inspired | SOFT TINES | Keys | Original synthesis |
-| 53 | LA-inspired | CLAVI CLICK | Keys | Original synthesis |
-| 54 | LA-inspired | VELVET CHORD | House keys | Original synthesis |
-| 55 | LA-inspired | AMBER PIANO | Keys | Original synthesis |
-| 56 | LA-inspired | PRISM KEY | Keys | Original synthesis |
-| 57 | Recorded PCM (LA) | PIANO FELT | Keys | VSCO 2 CE: Piano |
-| 58 | Recorded PCM (LA) | PIANO BRIGHT | Keys | VSCO 2 CE: Piano |
-| 59 | Recorded PCM (LA) | PIANO ROOM | Keys | VSCO 2 CE: Piano |
-| 60 | Recorded PCM (LA) | PIANO SHORT | Keys | VSCO 2 CE: Piano |
+| 51 | LA hybrid PCM | HAMMER KEY | Keys | Meta Open Sound: Piano |
+| 52 | LA hybrid PCM | SOFT TINES | Keys | VSCO 2 CE: Glockenspiel |
+| 53 | LA hybrid PCM | CLAVI CLICK | Keys | Meta Open Sound: Nylon guitar |
+| 54 | LA hybrid PCM | VELVET CHORD | House keys | Meta Open Sound: Piano |
+| 55 | LA hybrid PCM | AMBER PIANO | Keys | Meta Open Sound: Piano |
+| 56 | LA hybrid PCM | PRISM KEY | Keys | VSCO 2 CE: Glockenspiel |
+| 57 | LA hybrid PCM | PIANO FELT | Keys | Meta Open Sound: Piano |
+| 58 | LA hybrid PCM | PIANO BRIGHT | Keys | Meta Open Sound: Piano |
+| 59 | LA hybrid PCM | PIANO ROOM | Keys | Meta Open Sound: Piano |
+| 60 | LA hybrid PCM | PIANO SHORT | Keys | Meta Open Sound: Piano |
 
 ### Organ (61–68)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 61 | LA-inspired | DRAWBAR KEY | Organ | Original synthesis |
-| 62 | LA-inspired | PERC ORGAN | Organ | Original synthesis |
-| 63 | LA-inspired | CELLAR ORGAN | House organ | Original synthesis |
-| 64 | Recorded PCM (LA) | ORGAN MELLOW | Organ | VSCO 2 CE: Organ |
-| 65 | Recorded PCM (LA) | ORGAN CHAPEL | Organ | VSCO 2 CE: Organ |
-| 66 | Recorded PCM (LA) | ORGAN PERC | Organ | VSCO 2 CE: Organ |
-| 67 | Recorded PCM (LA) | ORGAN FULL | Organ | VSCO 2 CE: Organ |
-| 68 | Recorded PCM (LA) | ORGAN BRIGHT | Organ | VSCO 2 CE: Organ |
+| 61 | LA hybrid PCM | DRAWBAR KEY | Organ | VSCO 2 CE: Organ |
+| 62 | LA hybrid PCM | PERC ORGAN | Organ | VSCO 2 CE: Organ |
+| 63 | LA hybrid PCM | CELLAR ORGAN | House organ | VSCO 2 CE: Organ |
+| 64 | LA hybrid PCM | ORGAN MELLOW | Organ | VSCO 2 CE: Organ |
+| 65 | LA hybrid PCM | ORGAN CHAPEL | Organ | VSCO 2 CE: Organ |
+| 66 | LA hybrid PCM | ORGAN PERC | Organ | VSCO 2 CE: Organ |
+| 67 | LA hybrid PCM | ORGAN FULL | Organ | VSCO 2 CE: Organ |
+| 68 | LA hybrid PCM | ORGAN BRIGHT | Organ | VSCO 2 CE: Organ |
 
 ### Brass/Reed (69–76)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 69 | LA-inspired | REED STACK | Reed | Original synthesis |
-| 70 | LA-inspired | BRASS BLOCK | Brass | Original synthesis |
-| 71 | LA-inspired | SOFT HORNS | Brass | Original synthesis |
-| 72 | Recorded PCM (LA) | TRUMPET SECTION | Brass/Reed | VSCO 2 CE: Trumpet |
-| 73 | Recorded PCM (LA) | HORN MELLOW | Brass/Reed | VSCO 2 CE: French horn |
-| 74 | Recorded PCM (LA) | BASSOON REED | Brass/Reed | VSCO 2 CE: Bassoon |
-| 75 | Recorded PCM (LA) | TRUMPET FANFARE | Brass/Reed | VSCO 2 CE: Trumpet |
-| 76 | Recorded PCM (LA) | HORN LOW | Brass/Reed | VSCO 2 CE: French horn |
+| 69 | LA hybrid PCM | REED STACK | Reed | VSCO 2 CE: Oboe |
+| 70 | LA hybrid PCM | BRASS BLOCK | Brass | VSCO 2 CE: Trumpet |
+| 71 | LA hybrid PCM | SOFT HORNS | Brass | VSCO 2 CE: French horn |
+| 72 | LA hybrid PCM | TRUMPET SECTION | Brass/Reed | VSCO 2 CE: Trumpet |
+| 73 | LA hybrid PCM | HORN MELLOW | Brass/Reed | VSCO 2 CE: French horn |
+| 74 | LA hybrid PCM | BASSOON REED | Brass/Reed | VSCO 2 CE: Bassoon |
+| 75 | LA hybrid PCM | TRUMPET FANFARE | Brass/Reed | VSCO 2 CE: Trumpet |
+| 76 | LA hybrid PCM | HORN LOW | Brass/Reed | VSCO 2 CE: French horn |
 
 ### Strings (77–82)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 77 | LA-inspired | STRING VEIL | Strings | Original synthesis |
-| 78 | Recorded PCM (LA) | VIOLIN BOW | Strings | VSCO 2 CE: Solo violin |
-| 79 | Recorded PCM (LA) | VIOLA CHAMBER | Strings | VSCO 2 CE: Viola section |
-| 80 | Recorded PCM (LA) | CELLO ENSEMBLE | Strings | VSCO 2 CE: Cello section |
-| 81 | Recorded PCM (LA) | VIOLIN SILVER | Strings | VSCO 2 CE: Solo violin |
-| 82 | Recorded PCM (LA) | CONTRABASS BOW | Strings | VSCO 2 CE: Contrabass |
+| 77 | LA hybrid PCM | STRING VEIL | Strings | VSCO 2 CE: Viola section |
+| 78 | LA hybrid PCM | VIOLIN BOW | Strings | VSCO 2 CE: Solo violin |
+| 79 | LA hybrid PCM | VIOLA CHAMBER | Strings | VSCO 2 CE: Viola section |
+| 80 | LA hybrid PCM | CELLO ENSEMBLE | Strings | VSCO 2 CE: Cello section |
+| 81 | LA hybrid PCM | VIOLIN SILVER | Strings | VSCO 2 CE: Solo violin |
+| 82 | LA hybrid PCM | CONTRABASS BOW | Strings | VSCO 2 CE: Contrabass |
 
 ### Pad (83–94)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 83 | LA-inspired | SILK PAD | Pad | Original synthesis |
-| 84 | LA-inspired | SLOW HALO | Pad | Original synthesis |
-| 85 | LA-inspired | BELL CLOUD | Pad | Original synthesis |
-| 86 | LA-inspired | DUSK SCREEN | Pad | Original synthesis |
-| 87 | LA-inspired | AIR CHAMBER | Pad | Original synthesis |
-| 88 | Recorded PCM (LA) | PIANO CLOUD | Pad | VSCO 2 CE: Piano |
-| 89 | Recorded PCM (LA) | ORGAN HORIZON | Pad | VSCO 2 CE: Organ |
-| 90 | Recorded PCM (LA) | VIOLIN HALO | Pad | VSCO 2 CE: Solo violin |
-| 91 | Recorded PCM (LA) | VIOLA VEIL | Pad | VSCO 2 CE: Viola section |
-| 92 | Recorded PCM (LA) | CELLO WARM PAD | Pad | VSCO 2 CE: Cello section |
-| 93 | Recorded PCM (LA) | FLUTE AURORA | Pad | VSCO 2 CE: Flute |
-| 94 | Recorded PCM (LA) | HORN SLOW PAD | Pad | VSCO 2 CE: French horn |
+| 83 | LA hybrid PCM | SILK PAD | Pad | VSCO 2 CE: Viola section |
+| 84 | LA hybrid PCM | SLOW HALO | Pad | VSCO 2 CE: French horn |
+| 85 | LA hybrid PCM | BELL CLOUD | Pad | VSCO 2 CE: Glockenspiel |
+| 86 | LA hybrid PCM | DUSK SCREEN | Pad | VSCO 2 CE: Cello section |
+| 87 | LA hybrid PCM | AIR CHAMBER | Pad | VSCO 2 CE: Flute |
+| 88 | LA hybrid PCM | PIANO CLOUD | Pad | Meta Open Sound: Piano |
+| 89 | LA hybrid PCM | ORGAN HORIZON | Pad | VSCO 2 CE: Organ |
+| 90 | LA hybrid PCM | VIOLIN HALO | Pad | VSCO 2 CE: Solo violin |
+| 91 | LA hybrid PCM | VIOLA VEIL | Pad | VSCO 2 CE: Viola section |
+| 92 | LA hybrid PCM | CELLO WARM PAD | Pad | VSCO 2 CE: Cello section |
+| 93 | LA hybrid PCM | FLUTE AURORA | Pad | VSCO 2 CE: Flute |
+| 94 | LA hybrid PCM | HORN SLOW PAD | Pad | VSCO 2 CE: French horn |
 
 ### Pluck (95–104)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 95 | LA-inspired | NYLON PLUCK | Pluck | Original synthesis |
-| 96 | LA-inspired | THUMB PLUCK | Pluck | Original synthesis |
-| 97 | LA-inspired | WIRE ZITHER | Pluck | Original synthesis |
-| 98 | Recorded PCM (LA) | HARP BRIGHT | Pluck | VSCO 2 CE: Harp |
-| 99 | Recorded PCM (LA) | HARP RAIN | Pluck | VSCO 2 CE: Harp |
-| 100 | Recorded PCM (LA) | HARP MELLOW | Pluck | VSCO 2 CE: Harp |
-| 101 | Recorded PCM (LA) | HARP THREAD | Pluck | VSCO 2 CE: Harp |
-| 102 | Recorded PCM (LA) | PIANO PLUCK | Pluck | VSCO 2 CE: Piano |
-| 103 | Recorded PCM (LA) | MARIMBA PLUCK | Pluck | VSCO 2 CE: Marimba |
-| 104 | Recorded PCM (LA) | XYLO PLUCK | Pluck | VSCO 2 CE: Xylophone |
+| 95 | LA hybrid PCM | NYLON PLUCK | Pluck | Meta Open Sound: Nylon guitar |
+| 96 | LA hybrid PCM | THUMB PLUCK | Pluck | Meta Open Sound: Nylon guitar |
+| 97 | LA hybrid PCM | WIRE ZITHER | Pluck | VSCO 2 CE: Harp |
+| 98 | LA hybrid PCM | HARP BRIGHT | Pluck | VSCO 2 CE: Harp |
+| 99 | LA hybrid PCM | HARP RAIN | Pluck | VSCO 2 CE: Harp |
+| 100 | LA hybrid PCM | HARP MELLOW | Pluck | VSCO 2 CE: Harp |
+| 101 | LA hybrid PCM | HARP THREAD | Pluck | VSCO 2 CE: Harp |
+| 102 | LA hybrid PCM | PIANO PLUCK | Pluck | Meta Open Sound: Piano |
+| 103 | LA hybrid PCM | MARIMBA PLUCK | Pluck | VSCO 2 CE: Marimba |
+| 104 | LA hybrid PCM | XYLO PLUCK | Pluck | VSCO 2 CE: Xylophone |
 
 ### Mallet/Bell (105–112)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 105 | LA-inspired | GLASS BELL | Bell | Original synthesis |
-| 106 | LA-inspired | WOOD MALLET | Mallet | Original synthesis |
-| 107 | LA-inspired | GLASS TINES | Mallet | Original synthesis |
-| 108 | Recorded PCM (LA) | GLOCK BELL | Mallet/Bell | VSCO 2 CE: Glockenspiel |
-| 109 | Recorded PCM (LA) | MARIMBA HOLLOW | Mallet/Bell | VSCO 2 CE: Marimba |
-| 110 | Recorded PCM (LA) | GLOCK DROPS | Mallet/Bell | VSCO 2 CE: Glockenspiel |
-| 111 | Recorded PCM (LA) | XYLO BAR | Mallet/Bell | VSCO 2 CE: Xylophone |
-| 112 | Recorded PCM (LA) | MARIMBA ROUND | Mallet/Bell | VSCO 2 CE: Marimba |
+| 105 | LA hybrid PCM | GLASS BELL | Bell | VSCO 2 CE: Glockenspiel |
+| 106 | LA hybrid PCM | WOOD MALLET | Mallet | VSCO 2 CE: Marimba |
+| 107 | LA hybrid PCM | GLASS TINES | Mallet | VSCO 2 CE: Glockenspiel |
+| 108 | LA hybrid PCM | GLOCK BELL | Mallet/Bell | VSCO 2 CE: Glockenspiel |
+| 109 | LA hybrid PCM | MARIMBA HOLLOW | Mallet/Bell | VSCO 2 CE: Marimba |
+| 110 | LA hybrid PCM | GLOCK DROPS | Mallet/Bell | VSCO 2 CE: Glockenspiel |
+| 111 | LA hybrid PCM | XYLO BAR | Mallet/Bell | VSCO 2 CE: Xylophone |
+| 112 | LA hybrid PCM | MARIMBA ROUND | Mallet/Bell | VSCO 2 CE: Marimba |
 
 ### Voice (113–118)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 113 | LA-inspired | VOWEL CHIME | Voice-like | Original synthesis |
-| 114 | LA-inspired | BREATH STACK | Voice-like | Original synthesis |
-| 115 | LA-inspired | CHOIR FLICK | Voice-like | Original synthesis |
-| 116 | Recorded PCM (LA) | FLUTE CHOIR | Processed woodwind | VSCO 2 CE: Flute |
-| 117 | Recorded PCM (LA) | OBOE VOWEL | Processed woodwind | VSCO 2 CE: Oboe |
-| 118 | Recorded PCM (LA) | CLARINET VOICE | Processed woodwind | VSCO 2 CE: Clarinet |
+| 113 | LA hybrid PCM | VOWEL CHIME | Voice-like | VSCO 2 CE: Oboe |
+| 114 | LA hybrid PCM | BREATH STACK | Voice-like | VSCO 2 CE: Flute |
+| 115 | LA hybrid PCM | CHOIR FLICK | Voice-like | VSCO 2 CE: Clarinet |
+| 116 | LA hybrid PCM | FLUTE CHOIR | Processed woodwind | VSCO 2 CE: Flute |
+| 117 | LA hybrid PCM | OBOE VOWEL | Processed woodwind | VSCO 2 CE: Oboe |
+| 118 | LA hybrid PCM | CLARINET VOICE | Processed woodwind | VSCO 2 CE: Clarinet |
 
 ### Hit/Percussion (119–123)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 119 | LA-inspired | CHORD STAB | Stab | Original synthesis |
-| 120 | LA-inspired | BRASS IMPACT | Hit | Original synthesis |
-| 121 | LA-inspired | TIMBER HIT | Percussion | Original synthesis |
-| 122 | LA-inspired | TUBE STRIKE | Percussion | Original synthesis |
-| 123 | Recorded PCM (LA) | TRUMPET HIT | Hit/Percussion | VSCO 2 CE: Trumpet |
+| 119 | LA hybrid PCM | CHORD STAB | Stab | Meta Open Sound: Piano |
+| 120 | LA hybrid PCM | BRASS IMPACT | Hit | VSCO 2 CE: Trumpet |
+| 121 | LA hybrid PCM | TIMBER HIT | Percussion | VSCO 2 CE: Xylophone |
+| 122 | LA hybrid PCM | TUBE STRIKE | Percussion | VSCO 2 CE: Glockenspiel |
+| 123 | LA hybrid PCM | TRUMPET HIT | Hit/Percussion | VSCO 2 CE: Trumpet |
 
 ### Texture (124–128)
 
 | # | Sound engine | Preset name | Family | Sound source |
 |---|---|---|---|---|
-| 124 | LA-inspired | ORBITAL MT | Texture | Original synthesis |
-| 125 | LA-inspired | METAL RAIN | Texture | Original synthesis |
-| 126 | LA-inspired | SPACE SHARD | Texture | Original synthesis |
-| 127 | LA-inspired | DIGITAL MIST | Texture | Original synthesis |
-| 128 | Recorded PCM (LA) | VIOLA DRIFT | Texture | VSCO 2 CE: Viola section |
+| 124 | LA hybrid PCM | ORBITAL MT | Texture | VSCO 2 CE: French horn |
+| 125 | LA hybrid PCM | METAL RAIN | Texture | VSCO 2 CE: Glockenspiel |
+| 126 | LA hybrid PCM | SPACE SHARD | Texture | VSCO 2 CE: Glockenspiel |
+| 127 | LA hybrid PCM | DIGITAL MIST | Texture | VSCO 2 CE: Flute |
+| 128 | LA hybrid PCM | VIOLA DRIFT | Texture | VSCO 2 CE: Viola section |
 
 ## Recorded instrument sources
 
-The 64 recorded PCM presets use 16 recordings from
-[VSCO 2 Community Edition](https://github.com/sgossner/VSCO-2-CE/tree/440300901dfe9275fd84e0b7763af1f8443ae62e),
-released under [CC0 1.0 Universal](https://dspaudio.github.io/mc-1-web/samples-LICENSE.txt).
-Recorded by Sam Gossner & Simon Dalzell; sample cutting by Elan Hickler/Soundemote.
-VS Chamber Orchestra Community Edition, Versilian Studios.
+All 112 LA presets derive from 17 CC0-1.0 families: Piano and Nylon guitar from Meta Open Sound; Organ, Marimba, Glockenspiel, Xylophone, Harp, Solo violin, Viola section, Cello section, Contrabass, Flute, Oboe, Clarinet, Bassoon, Trumpet and French horn from VSCO 2 Community Edition. PCM IDs are 24–40 in that order. Voice presets are processed woodwinds, not human vocal recordings.
 
-These compact samples are resampled and trimmed from the source recordings;
-sustained instruments use loops. Multiple presets derive from each recording
-with different envelopes and filters. The three recorded PCM presets in Voice
-use processed woodwinds; they are not recordings of human voices.
-The [sample manifest](https://dspaudio.github.io/mc-1-web/recorded-samples.json)
-provides the pinned source revision, original file paths, hashes, pitch centers
-and processing settings.
+The [current manifest](core/assets/hybrid/manifest.json) records all 24 zones, source hashes, pitch metadata and attack/sustain processing. Meta recordings and metadata are credited to Meta Platforms, Inc., Creative Audio team; VSCO recordings to Sam Gossner & Simon Dalzell, sample cutting by Elan Hickler/Soundemote, Versilian Studios. [NOTICE.md](NOTICE.md) and the retained [Meta](core/LICENSES/CC0-Meta.txt) and [VSCO](core/LICENSES/CC0-VSCO.txt) licenses document the pinned sources. The [earlier VSCO manifest](core/assets/recorded/manifest.json) is retained for provenance; its piano is historical, not active.
 
-| Instrument | Original recording |
-|---|---|
-| Piano | [Player_dyn3_rr1_020.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Upright%20Piano/Player_dyn3_rr1_020.wav) |
-| Organ | [Rode_Man3Open_25.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Keys/Organ/Loud/Rode_Man3Open_25.wav) |
-| Marimba | [Marimba_hit_Outrigger_B2_loud_01.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Marimba/Marimba_hit_Outrigger_B2_loud_01.wav) |
-| Glockenspiel | [glock_medium_G4.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Glock/glock_medium_G4.wav) |
-| Xylophone | [Xylo_Medium_C4_ff_01_far.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Xylo/Xylo_Medium_C4_ff_01_far.wav) |
-| Harp | [KSHarp_B3_mf.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Strings/Harp/KSHarp_B3_mf.wav) |
-| Solo violin | [LLVln_ArcoVib_C4_f.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Strings/Solo%20Violin/Arco%20Vib/LLVln_ArcoVib_C4_f.wav) |
-| Viola section | [ViolaEns_susvib_B2_v1_1.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Strings/Viola%20Section/susvib/ViolaEns_susvib_B2_v1_1.wav) |
-| Cello section | [susvib_B1_v1_1.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Strings/Cello%20Section/susvib/susvib_B1_v1_1.wav) |
-| Contrabass | [BKCtbss_SusNV_C#2_v1_rr1.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Strings/Solo%20Contrabass/SusNV/BKCtbss_SusNV_C%232_v1_rr1.wav) |
-| Flute | [LDFlute_susNV_C3_v1_1.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Woodwinds/Flute/susNV/LDFlute_susNV_C3_v1_1.wav) |
-| Oboe | [Oboe_Sus_A#2_v1_Main.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Woodwinds/Oboe/Sus/Oboe_Sus_A%232_v1_Main.wav) |
-| Clarinet | [DCClar_susLong_A#2_v1_rr1_sum.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Woodwinds/Clarinet/susLong/DCClar_susLong_A%232_v1_rr1_sum.wav) |
-| Bassoon | [PSBassoon_C2_v1_1.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Woodwinds/Bassoon/sus/PSBassoon_C2_v1_1.wav) |
-| Trumpet | [Sum_SHTrumpet_sus_C3_v1_rr1.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Brass/Trumpet/sus/Sum_SHTrumpet_sus_C3_v1_rr1.wav) |
-| French horn | [MOHorn_sus_C3_v1_1.wav](https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Brass/F%20Horn/sus/MOHorn_sus_C3_v1_1.wav) |
+These compact sounds use real attacks and synthesized spectral sustain, not full multisampled instruments or sustained recording loops. The original WAVs and generators remain in the firmware repository. The emulator build carries both licenses and both manifests as `samples-Meta-LICENSE.txt`, `samples-LICENSE.txt`, `hybrid-samples.json` and `recorded-samples.json`.
 
 ## Drum kits
 

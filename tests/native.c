@@ -99,15 +99,15 @@ for(unsigned b=0;b<(60u*44100+127)/128;b++){emu_render(128);for(unsigned i=0;i<2
 printf("{\"audioHash\":%u,\"recordedPresets\":[",hash);
 unsigned count=0;
 for(unsigned preset=0;preset<MC_PRESETS;preset++){
-    if(mc_presets[preset].pcm<24)continue;
+    if(mc_presets[preset].engine!=MC_LA)continue;
     for(unsigned i=0;i<sizeof flash;i++)flash[i]=255;
     emu_init();
     unsigned part=preset%3;
     emu_enc(0,(int)part);
     emu_enc(6,(int)preset-(int)emu_state(6));
     assert(emu_state(6)==preset);
-    assert(engine.project.patch[part].pcm>=24&&engine.project.patch[part].pcm<40);
-    assert(engine.project.patch[part].pcm_mix==127);
+    assert(engine.project.patch[part].pcm>=24&&engine.project.patch[part].pcm<41);
+    assert(engine.project.patch[part].pcm_mix==mc_presets[preset].pcm_mix);
     tap(9);tap(9);
     uint32_t sound_hash=melody_hash();
     emu_init();emu_enc(0,(int)part);
@@ -119,7 +119,7 @@ for(unsigned preset=0;preset<MC_PRESETS;preset++){
     printf("],\"audioHash\":%u}",sound_hash);
     count++;
 }
-assert(count==64);
+assert(count==112);
 uint32_t record_hash=0,pattern_hash=patterns_hash(&record_hash);
 printf("],\"pattern64Hash\":%u,\"patternRecordHash\":%u,\"metronomeHash\":%u,\"fourBankHashes\":[",pattern_hash,record_hash,metronome_hash());
 four_bank_hashes();printf("]}\n");return 0;}

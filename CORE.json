@@ -1,30 +1,33 @@
 {
   "repository": "https://github.com/dspaudio/mc-1",
-  "commit": "d65898a7bb76e8bbe8a5cb355f56074a120c5b09",
+  "commit": "10a2240d7f3c63e3ed551774a8e17fb24ed002b8",
   "files": {
     "core/LICENSES/CC0-VSCO.txt": "36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673",
     "core/assets/recorded/manifest.json": "47acfab4d4b9e4c8daec2734101e4f91a5b348960d62d3e418bccabc1ed53b11",
     "core/host/bridge.c": "a02069688103a29d81ee3c38aadb4597c67447c525d96499e341a95def87a687",
     "core/src/demo.c": "11ea318dcb673d7c5f98c3bb6bd1c88db071066f47419507550f5ac9c36bea66",
-    "core/src/effects.c": "13b08701db4da813bef75ad78872708ec4ab3d68b0bc36c440e4034750e6d628",
-    "core/src/engine.c": "21cf39464c1f9a3ef12f929f9635ef6ef6cb91f8bf2a4bb41f5d0e0328990e57",
-    "core/src/factory.c": "7853c1e74e7309c7ac3f6916472d31162ede9dd9b8a4518ee7477919a2ee56f8",
+    "core/src/effects.c": "7dd5358b0b5ff281b6975492095994cd81462fafd344e17af3eed6b67b9a9cdb",
+    "core/src/engine.c": "7337affa887542cb0e0171642b1548950675ab9152e0a5bdbb87d5a4fe3ebe57",
+    "core/src/factory.c": "f8136324a7656333638ca7fa06421fb1a5cbf9b61e6b445224c40a5f4c781494",
     "core/src/fixed.h": "17b3218568707007510b9e802c1b9da657d0c42e32f16366f7855cd7d8cda36c",
-    "core/src/mcfm.h": "3d559b81a1f0f5a1bb3e1bcfa87c898e76aba0cdfc82cc9dcef58676d248ccc9",
+    "core/src/mcfm.h": "3aab1744e99b280abe30dfafe3282435aac16d3b37b56d225dfa79081a6b9169",
     "core/src/midi.c": "79fc69ceabe23301c4d7a21531522c9be64c2619869cfdc311a74fffeefe4473",
     "core/src/midi.h": "4c902d39d573541b9469c16931e86093c8c095323ea5bf9cd0ea1aef2bda7343",
     "core/src/presets.h": "4a0067dcaed8e43a529212589d38d61ac1766749e5f3d0123d0ec5c09eb5cb23",
     "core/src/project.c": "6a19b2c4f954767e7074f1cbf4d48653b319fad4b5820072ae37a50ae1821ec2",
-    "core/src/recorded_pcm.h": "61c3a354aa9f00d76a9ed057bc37952068666913b60261c4480cb963944fd178",
+    "core/src/recorded_pcm.h": "b5739e620918c157d9ccb9c08c39b9793dda9921ee8e28d8de55d0cfeceee9c6",
     "core/src/store.c": "be00b894365ce9ec771ba0762d0bff03da46127ab7247635a04fac936f0d3c98",
     "core/src/store.h": "ce79a51fff1d3cf9b31b62c3ff61398613abe3d30f6323b6253b2bc290aba8d1",
     "core/src/tables.h": "9754b4e09ccfb7c9861f26176065a708a2809f854ad10c524dc83fd7c289d6fe",
     "core/src/ui.c": "4c40694aa54060cf62f64785e7bc3d7b14a3c6f5d26d8c0faa3ff65d203500bd",
     "core/src/ui.h": "371f1c4447ac409684ded56430b842a83839746b86d027f0a7e7dbdb5815dfbf",
     "core/src/parallel.h": "3bd70d74cd724c8e8d94dcba1c6be888e87ed7b7056e2c4513097a3a8dd53e9f",
-    "core/firmware/panel_modes.h": "fb31b2a69140e7b39bbede0f17f5fb60148b2c0468c17cc48641239561c94ffc"
+    "core/firmware/panel_modes.h": "fb31b2a69140e7b39bbede0f17f5fb60148b2c0468c17cc48641239561c94ffc",
+    "core/src/hybrid_pcm.h": "79190f3e500aa4dda6e4591ceb9e763a236f3414ed853c1652980e453d8c0d5f",
+    "core/LICENSES/CC0-Meta.txt": "50dce29262afa9bff22e87fb8ded524886f7ca1a1df2a9865db51a659021fde3",
+    "core/assets/hybrid/manifest.json": "28d58eacbfb0d26045781b1db3a4cb8903e178b76f37ee94a2318bb92d96950e"
   },
-  "source_state": "committed",
-  "source_note": "MC-1 1.1.0 authoritative shared engine, UI and panel source from the pinned public firmware commit; all 21 file hashes independently matched against that commit. Four shared FX banks, per-melodic-part Analog, v8 projects, refreshed demos and 6x9 UI; eight melodic and six drum voices. Browser uses sequential mc_render in one AudioWorklet, not WL82 CPU1 timing/failure emulation.",
-  "source_base_commit": "869ed1265000075d0a52011d379e3da8060fcd70"
+  "source_state": "committed-release",
+  "source_note": "MC-1 1.2.0 shared core pinned to the tested firmware source commit. All 24 file hashes match that source, including the rebuilt LA-PCM engine and 112 replacement sounds from 17 CC0 Meta+VSCO families (24 zones). Acid presets and drums are unchanged. MC_PCM_WINDOW=32 and family-indexed zone lookup retain eight melodic and six drum voices. Browser uses sequential mc_render in one AudioWorklet, not WL82 CPU1 timing or failure emulation.",
+  "source_base_commit": "d65898a7bb76e8bbe8a5cb355f56074a120c5b09"
 }

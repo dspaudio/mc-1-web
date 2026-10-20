@@ -61,14 +61,16 @@ function melodyHash(instance){
  assert(energy>.1,'recorded instrument preset is audible');
  return hash;
 }
-assert.equal(native.recordedPresets.length,64,'64 presets use recorded instruments');
-assert.equal(new Set(native.recordedPresets.map(p=>p.id)).size,64);
-assert.deepEqual([...new Set(native.recordedPresets.map(p=>p.pcm))].sort((a,b)=>a-b),Array.from({length:16},(_,i)=>i+24),'all 16 recorded sources are used');
+assert.equal(native.recordedPresets.length,112,'112 LA presets use source-backed attacks and synthesized sustain');
+assert.equal(new Set(native.recordedPresets.map(p=>p.id)).size,112);
+assert.deepEqual(native.recordedPresets.map(p=>p.id),Array.from({length:128},(_,i)=>i).filter(i=>i<12||i>=28),'all LA slots, excluding the 16 unchanged Acid presets, are covered');
+assert.deepEqual([...new Set(native.recordedPresets.map(p=>p.pcm))].sort((a,b)=>a-b),Array.from({length:17},(_,i)=>i+24),'all 17 recorded source families are used');
+assert(native.recordedPresets.some(p=>p.patch[3]<127),'hybrid bank includes reduced attack contributions');
 for(const preset of native.recordedPresets){
  assert(preset.id>=0&&preset.id<presetCount);
  assert.equal(preset.patch[0],0,'recorded instruments use the LA engine');
  assert.equal(preset.patch[2],preset.pcm);
- assert.equal(preset.patch[3],127,'recorded instruments start with sample-only mix');
+ assert(preset.patch[3]>=0&&preset.patch[3]<=127,'hybrid attack contribution stays in range');
  const selected=boot();selected.emu_enc(0,preset.part);selected.emu_enc(6,preset.id-selected.emu_state(6));
  assert.equal(selected.emu_state(6),preset.id);
  tap(selected,9);tap(selected,9);assert(selected.emu_flash_gen()>0);
@@ -78,7 +80,7 @@ for(const preset of native.recordedPresets){
  const reloaded=boot(saved);reloaded.emu_enc(0,preset.part);
  assert.equal(melodyHash(reloaded),preset.audioHash,`recorded preset ${preset.id+1} matches native PCM after save/reload`);
 }
-console.log(JSON.stringify({wasmBytes:bytes.length,presetCount,categoryStarts,peak,energy,audioHash:hash,recordedPresetCount:native.recordedPresets.length,recordedSourceCount:16,flashBytes:flash.length,tests:'128-preset and category boundaries on all melodic parts, 64 recorded instruments select/play/save/reload with native PCM parity, panel, FX, demo completion, A/B save/reboot and full demo native/WASM parity'},null,2));
+console.log(JSON.stringify({wasmBytes:bytes.length,presetCount,categoryStarts,peak,energy,audioHash:hash,recordedPresetCount:native.recordedPresets.length,recordedSourceCount:17,flashBytes:flash.length,tests:'128-preset and category boundaries on all melodic parts, 112 hybrid LA instruments select/play/save/reload with native PCM parity, panel, FX, demo completion, A/B save/reboot and full demo native/WASM parity'},null,2));
 
 const sends=[40,41,44,45],types=[42,43,46,47];
 assert.equal(native.fourBankHashes.length,32);

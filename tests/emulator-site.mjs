@@ -17,4 +17,11 @@ for (const match of html.matchAll(/(?:href|src)=["']([^"'#?]+)(?:[?#][^"']*)?["'
 const info = JSON.parse(await fs.readFile('build/build-info.json', 'utf8'));
 assert.equal(info.version, (await fs.readFile('VERSION', 'utf8')).trim());
 assert.equal(info.version, JSON.parse(await fs.readFile('package.json', 'utf8')).version);
+for (const [source, shipped] of [
+    ['core/LICENSES/CC0-Meta.txt', 'samples-Meta-LICENSE.txt'],
+    ['core/LICENSES/CC0-VSCO.txt', 'samples-LICENSE.txt'],
+    ['core/assets/hybrid/manifest.json', 'hybrid-samples.json'],
+    ['core/assets/recorded/manifest.json', 'recorded-samples.json'],
+    ['NOTICE.md', 'NOTICE.md'],
+]) assert.deepEqual(await fs.readFile(`build/${shipped}`), await fs.readFile(source));
 console.log(JSON.stringify({emulatorOnlySite: 'PASS', version: info.version}));
